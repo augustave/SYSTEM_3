@@ -1449,6 +1449,7 @@ html[data-motion="idle"] .strip .dot {
   let lastHoverId = null;
   let rafId = 0;
   let loopActive = false;
+  let clockTimer = 0;
 
   function setMotionActive(active) {
     document.documentElement.dataset.motion = active ? 'active' : 'idle';
@@ -1456,6 +1457,8 @@ html[data-motion="idle"] .strip .dot {
       if (active) edgesSvg.unpauseAnimations();
       else edgesSvg.pauseAnimations();
     }
+    if (active) startClock();
+    else stopClock();
   }
 
   function wakePhysics() {
@@ -1548,7 +1551,18 @@ html[data-motion="idle"] .strip .dot {
       .map(v => String(v).padStart(2, '0')).join(':');
     clockEl.textContent = `${s} UTC`;
   }
-  setInterval(clock, 1000); clock();
+
+  function startClock() {
+    clock();
+    if (!clockTimer) clockTimer = window.setInterval(clock, 1000);
+  }
+
+  function stopClock() {
+    if (!clockTimer) return;
+    window.clearInterval(clockTimer);
+    clockTimer = 0;
+  }
+  clock();
 
   // ─── revision SHA ───────────────────────────────────────────────────────
   const sha = 'SHA-' + Math.abs(

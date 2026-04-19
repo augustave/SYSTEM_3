@@ -25,7 +25,7 @@ Nine active nodes: one Tier 0 meta-root plus eight clustered canonical nodes, bo
 - **Ripple wake** — nearby nodes within 420 px get partially cracked open by the spatial sympathy coefficient (0.28), with edge-linked nodes receiving topological sympathy (0.18) even outside direct range.
 - **Vector highlighting** — when a node's `baseT` exceeds 0.55, incident vectors glow and non-incident vectors dim to 16 % opacity.
 - **Sympathetic outline** — nodes being opened purely by ripple (ripple > 0.08, direct baseT < 0.3) get a vermillion 1 px ring.
-- **Idle sleep** — when the pointer leaves and every spring reaches rest, the physics loop and decorative SVG/CSS animations pause until the next interaction.
+- **Idle sleep** — when the pointer leaves and every spring reaches rest, the physics loop, clock timer, and decorative SVG/CSS animations pause until the next interaction.
 
 ## Vectors
 

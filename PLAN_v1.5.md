@@ -17,7 +17,7 @@ The earlier `ontology.json` plan was intentionally replaced by a script-loaded o
 - Ripple propagation partially unfolds neighboring and edge-linked nodes.
 - Incident edge highlighting dims unrelated vectors.
 - Sympathetic ripple nodes receive a vermillion outline.
-- The motion system sleeps at rest and pauses decorative animation until interaction resumes.
+- The motion system sleeps at rest and pauses the clock plus decorative animation until interaction resumes.
 
 ## Active Topology
 
