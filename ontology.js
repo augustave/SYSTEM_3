@@ -6,6 +6,20 @@
 window.__ONTOLOGY__ = {
   revision: "1.5.0",
 
+  metaAnchor: {
+    id: "KM_ANCHOR",
+    ref: "T·0 · META-ROOT",
+    label: "KM",
+    type: "System : Knowledge_Mesh",
+    governedBy: "TO",
+    manifestsAs: "T_UX",
+    structuredBy: "MO",
+    physics: "ν&lt;0 · 1-DOF",
+    terminal: "V-β TERMINAL",
+    metaRelations: "7 META-RELS · 3 VECTORS",
+    count: "N = 09 (1·META / 8·CANON)"
+  },
+
   clusters: [
     {
       id: "01",

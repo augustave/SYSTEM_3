@@ -3,13 +3,13 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=1600">
-<title>SYSTEM_3 // KNOWLEDGE_MESH v1.3.0</title>
+<title>SYSTEM_3 // KNOWLEDGE_MESH v1.5.0</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Inter:wght@400;500;700;800&display=swap" rel="stylesheet">
 <style>
 /* ════════════════════════════════════════════════════════════════════════════════
-   SYSTEM_3 · KNOWLEDGE_MESH · v1.2.0
+   SYSTEM_3 · KNOWLEDGE_MESH · v1.5.0
    Topological Ontology — Scientific Brutalism × Forensic Surrealism
    Palette: 1923 Pigment  //  Type: Swiss International  //  Surface: Miura-ori
    ════════════════════════════════════════════════════════════════════════════════ */
@@ -180,6 +180,10 @@ body {
 .strip .dot { display:inline-block; width:7px; height:7px; background: var(--p-vermillion); border-radius:50%; margin-right:8px; transform: translateY(1px); animation: pulse 2.1s infinite; }
 .strip .sep { color: color-mix(in srgb, var(--p-lead-white) 40%, transparent); }
 @keyframes pulse { 0%,100%{opacity:1;} 50%{opacity:.3;} }
+
+html[data-motion="idle"] .strip .dot {
+  animation-play-state: paused;
+}
 
 /* ════════════════════════════════════════════════════════════════════════════
    SHEET HEAD — monumental lockup
@@ -777,7 +781,7 @@ body {
     <span><span class="dot"></span>LIVE · MESH RENDER</span>
     <span>SYSTEM_3 · KNOWLEDGE MESH · TOPOLOGICAL ONTOLOGY <span class="sep">//</span> RESILIENT AUTONOMOUS SCALING</span>
     <span>SURFACE · MIURA-ORI · AUXETIC ν&lt;0 · 1-DOF</span>
-    <span>TRANSITIONS · SPRING K180·C22·M1</span>
+    <span>TRANSITIONS · FIXED-STEP SPRING K210·C30·M1</span>
     <span>INTERACTION · PROXIMITY-UNFOLD</span>
     <span id="clock">00:00:00 UTC</span>
   </div>
@@ -786,8 +790,8 @@ body {
   <header class="head">
     <div class="lockup">
       <div class="cat">PLATE 01 · OPERATIONAL BLUEPRINT</div>
-      <h1>SYSTEM_3 <em>v1.3.0</em></h1>
-      <div class="sub">A topological knowledge mesh. Seven canonical entities across three clusters, bound by two entanglement vectors. Nodes do not load — they <b>unfold from a continuous mesh substrate</b> on observer proximity, governed per frame by integrated spring physics. The ontology is the interface.</div>
+      <h1>SYSTEM_3 <em>v1.5.0</em></h1>
+      <div class="sub">A topological knowledge mesh. Nine active nodes across one meta-root and three clusters, bound by three entanglement vectors. Nodes do not load — they <b>unfold from a continuous mesh substrate</b> on observer proximity, governed per frame by integrated spring physics and sympathy ripple. The ontology is the interface.</div>
     </div>
     <div class="head-meta">
       <div class="k">ARCH</div>          <div class="v">TOPOLOGICAL ONTOLOGY</div>
@@ -817,34 +821,7 @@ body {
   <main class="mesh" id="mesh">
 
     <!-- KM META-ANCHOR — Tier 0 mesh root, V-β reflects here -->
-    <div class="node" data-id="KM_ANCHOR" style="
-      margin: 0 0 44px; padding: 14px 20px;
-      border: 1px solid var(--p-ivory-black);
-      background: linear-gradient(90deg,
-        var(--p-ivory-black) 0%, var(--p-ivory-black) 3px,
-        var(--ground) 3px, var(--ground) 100%);
-      display: grid; grid-template-columns: auto 1fr auto auto auto; gap: 22px;
-      align-items: center; position: relative; z-index: 3; cursor: default;">
-      <span style="font-family: var(--mono); font-size: 10px; letter-spacing: 0.22em;
-        text-transform: uppercase; color: var(--p-raw-umber);">T·0 · META-ROOT</span>
-      <div style="display: flex; align-items: baseline; gap: 14px;">
-        <span style="font-family: var(--sans); font-size: 22px; font-weight: 800;
-          letter-spacing: -0.01em; color: var(--ink);">KM</span>
-        <span style="font-family: var(--mono); font-size: 9px; letter-spacing: 0.14em;
-          text-transform: uppercase; color: var(--p-viridian);
-          border: 1px solid color-mix(in srgb, var(--p-viridian) 45%, transparent);
-          padding: 2px 7px;">System : Knowledge_Mesh</span>
-        <span style="font-family: var(--sans); font-size: 12px; color: color-mix(in srgb, var(--ink) 75%, transparent);">
-          Governed by <em style="font-style: normal; color: var(--p-prussian-blue); font-weight: 600;">TO</em> · manifests as <em style="font-style: normal; color: var(--p-prussian-blue); font-weight: 600;">T_UX</em> · structured by <em style="font-style: normal; color: var(--p-chrome-yellow); font-weight: 600;">MO</em> (ν&lt;0 · 1-DOF)</span>
-      </div>
-      <span style="font-family: var(--mono); font-size: 9px; letter-spacing: 0.14em;
-        text-transform: uppercase; color: var(--p-alizarin);
-        border: 1px solid var(--p-alizarin); padding: 3px 7px;">V-β TERMINAL</span>
-      <span style="font-family: var(--mono); font-size: 9px; letter-spacing: 0.14em;
-        text-transform: uppercase; color: var(--p-raw-umber);">7 META-RELS · 2 VECTORS</span>
-      <span style="font-family: var(--mono); font-size: 9px; letter-spacing: 0.14em;
-        text-transform: uppercase; color: var(--p-burnt-sienna);">N = 13 (7·META / 6·CANON)</span>
-    </div>
+    <div id="cms-meta-anchor"></div>
 
     <!-- Continuous Miura-ori substrate -->
     <div class="substrate" id="substrate">
@@ -883,7 +860,7 @@ body {
   <div class="titleblock">
     <div>
       <span class="k">SHEET TITLE</span>
-      <span class="v v--big">KNOWLEDGE_MESH v1.3.0 · PLATE 01</span>
+      <span class="v v--big">KNOWLEDGE_MESH v1.5.0 · PLATE 01</span>
     </div>
     <div>
       <span class="k">PROJECT</span>
@@ -932,6 +909,7 @@ body {
   const $$ = (s, r = document) => Array.from(r.querySelectorAll(s));
 
   const mesh      = $('#mesh');
+  const metaTrg   = $('#cms-meta-anchor');
   const cmsTrg    = $('#cms-clusters');
   const edgesSvg  = $('#edges');
   const substrate = $('#substrateSvg');
@@ -945,10 +923,28 @@ body {
   const clockEl   = $('#clock');
   const rulerTop  = $('#rulerTop');
   const rulerLeft = $('#rulerLeft');
+  document.documentElement.dataset.motion = 'idle';
 
-  // SPRING — per spec: mass/tension/friction integration per frame
-  const K = 180, C = 22, M = 1;
-  const PROX = 280;
+  // SPRING — fixed-step semi-implicit integration for stable fold motion.
+  const PHYSICS = {
+    stiffness: 210,
+    damping: 30,
+    mass: 1,
+    proximity: 280,
+    fixedDt: 1 / 120,
+    maxFrameDt: 0.08,
+    maxSubsteps: 10,
+    maxUnfold: 1.08,
+    maxVelocity: 9,
+    pointerSmoothing: 20,
+    rippleRange: 420,
+    rippleSympathy: 0.28,
+    topologySympathy: 0.18,
+    hoverThreshold: 0.55,
+    sympathyThreshold: 0.08,
+    restEpsilon: 0.00045,
+    sleepEpsilon: 0.0015
+  };
 
   // ─── ONTOLOGY DATA (sourced from ontology.js) ───────────────────────────
   if (!window.__ONTOLOGY__) {
@@ -962,6 +958,43 @@ body {
     return;
   }
   const ontologyData = window.__ONTOLOGY__.clusters;
+  const ontologyRevision = window.__ONTOLOGY__.revision || '1.5.0';
+
+  // Render Tier 0 meta-root from ontology data.
+  function renderMetaAnchor() {
+    const m = window.__ONTOLOGY__.metaAnchor;
+    if (!metaTrg || !m) return;
+    metaTrg.innerHTML = `
+      <div class="node" data-id="${m.id}" style="
+        margin: 0 0 44px; padding: 14px 20px;
+        border: 1px solid var(--p-ivory-black);
+        background: linear-gradient(90deg,
+          var(--p-ivory-black) 0%, var(--p-ivory-black) 3px,
+          var(--ground) 3px, var(--ground) 100%);
+        display: grid; grid-template-columns: auto 1fr auto auto auto; gap: 22px;
+        align-items: center; position: relative; z-index: 3; cursor: default;">
+        <span style="font-family: var(--mono); font-size: 10px; letter-spacing: 0.22em;
+          text-transform: uppercase; color: var(--p-raw-umber);">${m.ref}</span>
+        <div style="display: flex; align-items: baseline; gap: 14px;">
+          <span style="font-family: var(--sans); font-size: 22px; font-weight: 800;
+            letter-spacing: -0.01em; color: var(--ink);">${m.label}</span>
+          <span style="font-family: var(--mono); font-size: 9px; letter-spacing: 0.14em;
+            text-transform: uppercase; color: var(--p-viridian);
+            border: 1px solid color-mix(in srgb, var(--p-viridian) 45%, transparent);
+            padding: 2px 7px;">${m.type}</span>
+          <span style="font-family: var(--sans); font-size: 12px; color: color-mix(in srgb, var(--ink) 75%, transparent);">
+            Governed by <em style="font-style: normal; color: var(--p-prussian-blue); font-weight: 600;">${m.governedBy}</em> · manifests as <em style="font-style: normal; color: var(--p-prussian-blue); font-weight: 600;">${m.manifestsAs}</em> · structured by <em style="font-style: normal; color: var(--p-chrome-yellow); font-weight: 600;">${m.structuredBy}</em> (${m.physics})</span>
+        </div>
+        <span style="font-family: var(--mono); font-size: 9px; letter-spacing: 0.14em;
+          text-transform: uppercase; color: var(--p-alizarin);
+          border: 1px solid var(--p-alizarin); padding: 3px 7px;">${m.terminal}</span>
+        <span style="font-family: var(--mono); font-size: 9px; letter-spacing: 0.14em;
+          text-transform: uppercase; color: var(--p-raw-umber);">${m.metaRelations}</span>
+        <span style="font-family: var(--mono); font-size: 9px; letter-spacing: 0.14em;
+          text-transform: uppercase; color: var(--p-burnt-sienna);">${m.count}</span>
+      </div>
+    `;
+  }
 
   // Render HTML from JSON
   function renderOntology() {
@@ -1020,16 +1053,32 @@ body {
   }
 
   // Generate DOM nodes FIRST
+  renderMetaAnchor();
   renderOntology();
   renderGhosts();
 
   // dynamic global node tracking & state registry
   const nodes = $$('.node');
   const state = new Map();
-  nodes.forEach(n => state.set(n, { u: 0, v: 0, t: 0, cx: 0, cy: 0, baseT: 0 }));
+  nodes.forEach(n => state.set(n, { u: 0, v: 0, t: 0, cx: 0, cy: 0, baseT: 0, ripple: 0 }));
 
   // ─── edge defs ──────────────────────────────────────────────────────────
   const edges = window.__ONTOLOGY__.edges;
+
+  function buildTopologyIndex() {
+    const graph = new Map(nodes.map(n => [n.dataset.id, new Set()]));
+    edges.forEach(e => {
+      e.sources.forEach(src => {
+        e.targets.forEach(tgt => {
+          if (!graph.has(src) || !graph.has(tgt)) return;
+          graph.get(src).add(tgt);
+          graph.get(tgt).add(src);
+        });
+      });
+    });
+    return graph;
+  }
+  const topology = buildTopologyIndex();
 
   // ─── rulers ─────────────────────────────────────────────────────────────
   function buildRulers() {
@@ -1265,105 +1314,198 @@ body {
     });
 
     edgesSvg.innerHTML = out;
+    if (!loopActive && typeof edgesSvg.pauseAnimations === 'function') {
+      edgesSvg.pauseAnimations();
+    }
   }
 
-  // ─── mouse / proximity ──────────────────────────────────────────────────
-  let mX = -9999, mY = -9999;
-  window.addEventListener('mousemove', (e) => {
-    mX = e.clientX; mY = e.clientY;
-    xh.style.left = mX + 'px';
-    xh.style.top  = mY + 'px';
-    readout.style.left = mX + 'px';
-    readout.style.top  = mY + 'px';
-  }, { passive: true });
-  window.addEventListener('mouseleave', () => { mX = -9999; mY = -9999; });
+  // ─── pointer / proximity ────────────────────────────────────────────────
+  const pointer = { active: false, initialized: false, x: 0, y: 0, tx: 0, ty: 0 };
+  function setPointer(e) {
+    pointer.active = true;
+    pointer.tx = e.clientX;
+    pointer.ty = e.clientY;
+    if (!pointer.initialized) {
+      pointer.x = pointer.tx;
+      pointer.y = pointer.ty;
+      pointer.initialized = true;
+    }
+    xh.style.left = pointer.tx + 'px';
+    xh.style.top  = pointer.ty + 'px';
+    readout.style.left = pointer.tx + 'px';
+    readout.style.top  = pointer.ty + 'px';
+    wakePhysics();
+  }
+  window.addEventListener('pointermove', setPointer, { passive: true });
+  window.addEventListener('pointerleave', () => { pointer.active = false; });
+  window.addEventListener('blur', () => { pointer.active = false; });
+
+  function smoothstep01(x) {
+    const t = Math.max(0, Math.min(1, x));
+    return t * t * (3 - 2 * t);
+  }
+
+  function integrateSpring(s, dt) {
+    const force = PHYSICS.stiffness * (s.t - s.u) - PHYSICS.damping * s.v;
+    s.v += (force / PHYSICS.mass) * dt;
+    s.v = Math.max(-PHYSICS.maxVelocity, Math.min(PHYSICS.maxVelocity, s.v));
+    s.u += s.v * dt;
+
+    if (s.u < 0) {
+      s.u = 0;
+      if (s.v < 0) s.v = 0;
+    } else if (s.u > PHYSICS.maxUnfold) {
+      s.u = PHYSICS.maxUnfold;
+      if (s.v > 0) s.v = 0;
+    }
+
+    if (Math.abs(s.v) < PHYSICS.restEpsilon && Math.abs(s.t - s.u) < PHYSICS.restEpsilon) {
+      s.v = 0;
+      s.u = s.t;
+    }
+  }
+
+  function updateTargets(lmx, lmy, pointerIsActive) {
+    let minProx = Infinity;
+
+    nodes.forEach(n => {
+      const s = state.get(n);
+      if (!pointerIsActive) {
+        s.baseT = 0;
+        return;
+      }
+
+      const d = Math.hypot(s.cx - lmx, s.cy - lmy);
+      if (d < minProx) minProx = d;
+      s.baseT = smoothstep01(1 - d / PHYSICS.proximity);
+    });
+
+    let hoverNode = null, hoverBase = 0;
+    nodes.forEach(n => {
+      const s = state.get(n);
+      if (s.baseT > hoverBase && s.baseT > PHYSICS.hoverThreshold) {
+        hoverBase = s.baseT;
+        hoverNode = n;
+      }
+    });
+
+    nodes.forEach(n1 => {
+      const s1 = state.get(n1);
+      let ripple = 0;
+      const id1 = n1.dataset.id;
+
+      nodes.forEach(n2 => {
+        if (n1 === n2) return;
+        const s2 = state.get(n2);
+        if (s2.baseT <= 0.035) return;
+
+        const dist = Math.hypot(s1.cx - s2.cx, s1.cy - s2.cy);
+        const spatial = smoothstep01(1 - dist / PHYSICS.rippleRange) * PHYSICS.rippleSympathy;
+        const linked = topology.get(id1)?.has(n2.dataset.id) ? PHYSICS.topologySympathy : 0;
+        ripple += s2.baseT * Math.max(spatial, linked);
+      });
+
+      s1.ripple = ripple;
+      s1.t = Math.min(1, s1.baseT + ripple);
+    });
+
+    return { minProx, hoverNode };
+  }
+
+  function applyNodeStyles(hoverNode) {
+    nodes.forEach(n => {
+      const s = state.get(n);
+      n.style.setProperty('--u', s.u.toFixed(4));
+
+      const isSympathetic =
+        n !== hoverNode &&
+        s.ripple > PHYSICS.sympathyThreshold &&
+        s.baseT < 0.3;
+
+      if (isSympathetic) {
+        if (n.dataset.sympathetic !== '1') n.dataset.sympathetic = '1';
+      } else if (n.dataset.sympathetic === '1') {
+        delete n.dataset.sympathetic;
+      }
+    });
+  }
+
+  function physicsSettled() {
+    return nodes.every(n => {
+      const s = state.get(n);
+      return (
+        Math.abs(s.v) <= PHYSICS.sleepEpsilon &&
+        Math.abs(s.u - s.t) <= PHYSICS.sleepEpsilon &&
+        s.baseT === 0 &&
+        s.ripple === 0
+      );
+    });
+  }
 
   // ─── main loop ──────────────────────────────────────────────────────────
   let last = performance.now();
+  let accumulator = 0;
   let frames = 0, fpsAcc = 0;
   let lastHoverId = null;
+  let rafId = 0;
+  let loopActive = false;
+
+  function setMotionActive(active) {
+    document.documentElement.dataset.motion = active ? 'active' : 'idle';
+    if (typeof edgesSvg.unpauseAnimations === 'function' && typeof edgesSvg.pauseAnimations === 'function') {
+      if (active) edgesSvg.unpauseAnimations();
+      else edgesSvg.pauseAnimations();
+    }
+  }
+
+  function wakePhysics() {
+    if (loopActive) return;
+    loopActive = true;
+    setMotionActive(true);
+    last = performance.now();
+    accumulator = 0;
+    rafId = requestAnimationFrame(frame);
+  }
+
+  function sleepPhysics() {
+    loopActive = false;
+    rafId = 0;
+    setMotionActive(false);
+  }
 
   function frame(now) {
-    const dt = Math.min(0.035, (now - last) / 1000);
+    const frameDt = Math.min(PHYSICS.maxFrameDt, Math.max(0, (now - last) / 1000));
     last = now;
-    frames++; fpsAcc += dt;
+    accumulator += frameDt;
+    frames++; fpsAcc += frameDt;
     if (fpsAcc > 0.5) {
       const fps = Math.round(frames / fpsAcc);
       fpsEl.textContent = fps;
       frames = 0; fpsAcc = 0;
     }
 
+    if (pointer.active) {
+      const alpha = 1 - Math.exp(-PHYSICS.pointerSmoothing * frameDt);
+      pointer.x += (pointer.tx - pointer.x) * alpha;
+      pointer.y += (pointer.ty - pointer.y) * alpha;
+    }
+
     const mr = mesh.getBoundingClientRect();
-    const lmx = mX - mr.left, lmy = mY - mr.top;
+    const lmx = pointer.x - mr.left;
+    const lmy = pointer.y - mr.top;
+    const { minProx, hoverNode } = updateTargets(lmx, lmy, pointer.active);
 
-    let minProx = Infinity;
+    let steps = 0;
+    while (accumulator >= PHYSICS.fixedDt && steps < PHYSICS.maxSubsteps) {
+      nodes.forEach(n => integrateSpring(state.get(n), PHYSICS.fixedDt));
+      accumulator -= PHYSICS.fixedDt;
+      steps++;
+    }
+    if (steps === PHYSICS.maxSubsteps) accumulator = 0;
 
-    // PASS 1: Base proximity (OODA Observation)
-    nodes.forEach(n => {
-      const s = state.get(n);
-      const d = Math.hypot(s.cx - lmx, s.cy - lmy);
-      if (d < minProx) minProx = d;
+    applyNodeStyles(hoverNode);
 
-      let raw = d < PROX ? 1 - d / PROX : 0;
-      s.baseT = raw * raw * (3 - 2 * raw);
-    });
-
-    // PASS 2: Topological Structural Ripple (Neighbor Interference)
-    const RIPPLE_RANGE = 380;
-    const RIPPLE_SYMPATHY = 0.35;
-    const HOVER_THRESHOLD = 0.55;
-    const SYMPATHY_THRESHOLD = 0.1;
-
-    // resolve hover target (highest baseT above threshold)
-    let hoverNode = null, hoverBase = 0;
-    nodes.forEach(n => {
-      const s = state.get(n);
-      if (s.baseT > hoverBase && s.baseT > HOVER_THRESHOLD) {
-        hoverBase = s.baseT;
-        hoverNode = n;
-      }
-    });
     const hoverId = hoverNode ? hoverNode.dataset.id : '';
-
-    nodes.forEach(n1 => {
-      const s1 = state.get(n1);
-      let ripple = 0;
-
-      nodes.forEach(n2 => {
-        if (n1 === n2) return;
-        const s2 = state.get(n2);
-        if (s2.baseT > 0.05) {
-          const dist = Math.hypot(s1.cx - s2.cx, s1.cy - s2.cy);
-          if (dist < RIPPLE_RANGE) {
-            let impact = 1 - (dist / RIPPLE_RANGE);
-            ripple += s2.baseT * impact * RIPPLE_SYMPATHY;
-          }
-        }
-      });
-
-      s1.t = Math.min(1.0, s1.baseT + ripple);
-
-      // PASS 3: Integrated Spring physics (Mass-Spring-Damper)
-      const force = -K * (s1.u - s1.t) - C * s1.v;
-      s1.v += (force / M) * dt;
-      s1.u += s1.v * dt;
-
-      if (s1.u < 0) s1.u = 0;
-      if (s1.u > 1.12) s1.u = 1.12;
-
-      n1.style.setProperty('--u', s1.u.toFixed(4));
-
-      // Sympathetic-neighbor outline: node is being cracked open by ripple
-      // rather than direct proximity, AND it isn't itself the hover target.
-      const isSympathetic = n1 !== hoverNode && ripple > SYMPATHY_THRESHOLD && s1.baseT < 0.3;
-      if (isSympathetic) {
-        if (n1.dataset.sympathetic !== '1') n1.dataset.sympathetic = '1';
-      } else if (n1.dataset.sympathetic === '1') {
-        delete n1.dataset.sympathetic;
-      }
-    });
-
-    // PASS 4: Edge highlight — stamp data-match on incident SVG elements
     if (hoverId !== lastHoverId) {
       const layer = edgesSvg.parentElement;
       if (hoverId) {
@@ -1381,16 +1523,22 @@ body {
     }
 
     if (readout) {
-      readout.textContent =
-        `X ${String(Math.max(0, Math.round(lmx))).padStart(3,'0')} · ` +
-        `Y ${String(Math.max(0, Math.round(lmy))).padStart(3,'0')} · ` +
-        `PROX ${isFinite(minProx) ? Math.round(minProx) + 'PX' : '∞'}`;
+      readout.textContent = pointer.active
+        ? `X ${String(Math.max(0, Math.round(lmx))).padStart(3,'0')} · ` +
+          `Y ${String(Math.max(0, Math.round(lmy))).padStart(3,'0')} · ` +
+          `PROX ${isFinite(minProx) ? Math.round(minProx) + 'PX' : '∞'}`
+        : 'X 000 · Y 000 · PROX ∞';
     }
-    if (pminEl) pminEl.textContent = isFinite(minProx) ? Math.round(minProx) + 'PX' : '∞';
+    if (pminEl) pminEl.textContent = pointer.active && isFinite(minProx) ? Math.round(minProx) + 'PX' : '∞';
     if (obsEl) obsEl.textContent =
-      (isFinite(minProx) ? `X${Math.max(0, Math.round(lmx))} · Y${Math.max(0, Math.round(lmy))}` : '— · —');
+      (pointer.active && isFinite(minProx) ? `X${Math.max(0, Math.round(lmx))} · Y${Math.max(0, Math.round(lmy))}` : '— · —');
 
-    requestAnimationFrame(frame);
+    if (!pointer.active && physicsSettled()) {
+      sleepPhysics();
+      return;
+    }
+
+    rafId = requestAnimationFrame(frame);
   }
 
   // ─── clock ──────────────────────────────────────────────────────────────
@@ -1404,7 +1552,7 @@ body {
 
   // ─── revision SHA ───────────────────────────────────────────────────────
   const sha = 'SHA-' + Math.abs(
-    Array.from('SYSTEM_3-KNOWLEDGE_MESH-v1.2.0').reduce((a,c)=>((a<<5)-a+c.charCodeAt(0))|0,0)
+    Array.from(`SYSTEM_3-KNOWLEDGE_MESH-${ontologyRevision}`).reduce((a,c)=>((a<<5)-a+c.charCodeAt(0))|0,0)
   ).toString(16).toUpperCase().slice(0,6);
   revEl.textContent = sha;
   revEl2.textContent = sha;
@@ -1420,10 +1568,16 @@ body {
 
   window.addEventListener('load', () => {
     recompute();
-    requestAnimationFrame(frame);
+    wakePhysics();
   });
-  window.addEventListener('resize', recompute);
-  window.addEventListener('scroll', recompute, { passive: true });
+  window.addEventListener('resize', () => {
+    recompute();
+    wakePhysics();
+  });
+  window.addEventListener('scroll', () => {
+    recompute();
+    wakePhysics();
+  }, { passive: true });
   setTimeout(recompute, 80);
   setTimeout(recompute, 250);
   setTimeout(recompute, 700);
