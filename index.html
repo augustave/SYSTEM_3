@@ -1163,10 +1163,9 @@ html[data-motion="idle"] .strip .dot {
     return { x: r.left - mr.left + r.width / 2, y: r.top - mr.top + r.height * 0.72 };
   }
 
-  function globalAnchor(el, relRoot) {
+  function viewportAnchor(el) {
     const r = el.getBoundingClientRect();
-    const rr = relRoot.getBoundingClientRect();
-    return { x: r.left - rr.left + r.width / 2, y: r.top - rr.top + r.height * 0.3 };
+    return { x: r.left + r.width / 2, y: r.top + r.height * 0.3 };
   }
 
   function updateCenters() {
@@ -1179,28 +1178,25 @@ html[data-motion="idle"] .strip .dot {
 
   // ─── edge render (polyline with inflection) ─────────────────────────────
   function drawEdges() {
-    const rootRect = document.body.getBoundingClientRect();
-    // Use body as shared reference so we can link cluster nodes to ghost nodes below the mesh
-    const svgW = rootRect.width;
-    const svgH = rootRect.height;
+    const layer = edgesSvg.parentElement;
+    layer.style.position = 'fixed';
+    layer.style.top = '0';
+    layer.style.left = '0';
+    layer.style.right = '0';
+    layer.style.bottom = '0';
+    layer.style.width = '100vw';
+    layer.style.height = '100vh';
+    layer.style.overflow = 'hidden';
+    layer.style.pointerEvents = 'none';
+
+    const svgW = window.innerWidth;
+    const svgH = window.innerHeight;
     edgesSvg.setAttribute('viewBox', `0 0 ${svgW} ${svgH}`);
     edgesSvg.style.position = 'absolute';
     edgesSvg.style.top = '0';
     edgesSvg.style.left = '0';
     edgesSvg.style.width = svgW + 'px';
     edgesSvg.style.height = svgH + 'px';
-
-    // Reposition edges-layer to span whole body
-    const layer = edgesSvg.parentElement;
-    layer.style.position = 'fixed';
-    layer.style.top = '0';
-    layer.style.left = '0';
-    layer.style.width = '100%';
-    layer.style.height = document.documentElement.scrollHeight + 'px';
-    layer.style.pointerEvents = 'none';
-    edgesSvg.setAttribute('viewBox', `0 0 ${document.documentElement.scrollWidth} ${document.documentElement.scrollHeight}`);
-    edgesSvg.style.width = document.documentElement.scrollWidth + 'px';
-    edgesSvg.style.height = document.documentElement.scrollHeight + 'px';
 
     let defs = `<defs>
       <marker id="head-chrome" viewBox="0 0 12 12" refX="11" refY="6" markerWidth="12" markerHeight="12" orient="auto-start-reverse">
@@ -1217,17 +1213,14 @@ html[data-motion="idle"] .strip .dot {
       </marker>
     </defs>`;
     let out = defs;
-
-    const page = document.body;
-
     edges.forEach((e, ei) => {
       const srcEls = e.sources.map(id => $(`.node[data-id="${id}"]`)).filter(Boolean);
       const tgtEls = e.targets.map(id => $(`.node[data-id="${id}"]`)).filter(Boolean);
 
       srcEls.forEach((s, si) => {
         tgtEls.forEach((t, ti) => {
-          const a = globalAnchor(s, page);
-          const b = globalAnchor(t, page);
+          const a = viewportAnchor(s);
+          const b = viewportAnchor(t);
 
           // polyline with inflection — orthogonal-ish routing with one bend at 60%
           const infX = a.x + (b.x - a.x) * 0.55;
