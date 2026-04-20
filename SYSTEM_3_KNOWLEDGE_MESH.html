@@ -913,6 +913,7 @@ html[data-motion="idle"] .strip .dot {
   const cmsTrg    = $('#cms-clusters');
   const edgesSvg  = $('#edges');
   const substrate = $('#substrateSvg');
+  const ghostZone = $('.ghost-zone');
   const xh        = $('#xh');
   const readout   = $('#readout');
   const fpsEl     = $('#fps');
@@ -1312,6 +1313,27 @@ html[data-motion="idle"] .strip .dot {
     }
   }
 
+  function reserveExpansionSpace() {
+    const previousU = nodes.map(n => n.style.getPropertyValue('--u'));
+    const targets = [mesh, ghostZone].filter(Boolean);
+
+    targets.forEach(el => {
+      el.style.minHeight = '';
+    });
+    nodes.forEach(n => {
+      n.style.setProperty('--u', String(PHYSICS.maxUnfold));
+    });
+
+    targets.forEach(el => {
+      el.style.minHeight = Math.ceil(el.getBoundingClientRect().height) + 'px';
+    });
+
+    nodes.forEach((n, i) => {
+      if (previousU[i]) n.style.setProperty('--u', previousU[i]);
+      else n.style.removeProperty('--u');
+    });
+  }
+
   // ─── pointer / proximity ────────────────────────────────────────────────
   const pointer = { active: false, initialized: false, x: 0, y: 0, tx: 0, ty: 0 };
   function setPointer(e) {
@@ -1330,8 +1352,13 @@ html[data-motion="idle"] .strip .dot {
     wakePhysics();
   }
   window.addEventListener('pointermove', setPointer, { passive: true });
-  window.addEventListener('pointerleave', () => { pointer.active = false; });
-  window.addEventListener('blur', () => { pointer.active = false; });
+  function clearPointer() {
+    if (!pointer.active) return;
+    pointer.active = false;
+    wakePhysics();
+  }
+  window.addEventListener('pointerleave', clearPointer);
+  window.addEventListener('blur', clearPointer);
 
   function smoothstep01(x) {
     const t = Math.max(0, Math.min(1, x));
@@ -1428,9 +1455,7 @@ html[data-motion="idle"] .strip .dot {
       const s = state.get(n);
       return (
         Math.abs(s.v) <= PHYSICS.sleepEpsilon &&
-        Math.abs(s.u - s.t) <= PHYSICS.sleepEpsilon &&
-        s.baseT === 0 &&
-        s.ripple === 0
+        Math.abs(s.u - s.t) <= PHYSICS.sleepEpsilon
       );
     });
   }
@@ -1529,7 +1554,7 @@ html[data-motion="idle"] .strip .dot {
     if (obsEl) obsEl.textContent =
       (pointer.active && isFinite(minProx) ? `X${Math.max(0, Math.round(lmx))} · Y${Math.max(0, Math.round(lmy))}` : '— · —');
 
-    if (!pointer.active && physicsSettled()) {
+    if (physicsSettled()) {
       sleepPhysics();
       return;
     }
@@ -1565,29 +1590,34 @@ html[data-motion="idle"] .strip .dot {
   revEl2.textContent = sha;
 
   // ─── bootstrap ──────────────────────────────────────────────────────────
-  function recompute() {
+  function recompute(options = {}) {
+    if (options.reserve) reserveExpansionSpace();
     updateCenters();
     drawEdges();
   }
 
   buildRulers();
   buildSubstrate();
+  reserveExpansionSpace();
 
   window.addEventListener('load', () => {
-    recompute();
+    recompute({ reserve: true });
     wakePhysics();
   });
   window.addEventListener('resize', () => {
-    recompute();
+    recompute({ reserve: true });
     wakePhysics();
   });
   window.addEventListener('scroll', () => {
     recompute();
     wakePhysics();
   }, { passive: true });
-  setTimeout(recompute, 80);
-  setTimeout(recompute, 250);
-  setTimeout(recompute, 700);
+  setTimeout(() => recompute({ reserve: true }), 80);
+  setTimeout(() => recompute({ reserve: true }), 250);
+  setTimeout(() => recompute({ reserve: true }), 700);
+  if (document.fonts && document.fonts.ready) {
+    document.fonts.ready.then(() => recompute({ reserve: true }));
+  }
 })();
 </script>
 
