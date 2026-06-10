@@ -1212,6 +1212,18 @@ html[data-motion="idle"] .strip .dot {
   }
 
   // ─── edge render (polyline with inflection) ─────────────────────────────
+  // Geometry is built in viewport coordinates at build-time scroll position;
+  // scrolling only translates #edgeRoot instead of rebuilding the SVG, so
+  // <animate> packet phases survive scroll.
+  const edgeBuildScroll = { x: 0, y: 0 };
+
+  function positionEdges() {
+    const root = edgesSvg.querySelector('#edgeRoot');
+    if (!root) return;
+    root.setAttribute('transform',
+      `translate(${edgeBuildScroll.x - window.scrollX}, ${edgeBuildScroll.y - window.scrollY})`);
+  }
+
   function drawEdges() {
     const layer = edgesSvg.parentElement;
     layer.style.position = 'fixed';
@@ -1247,7 +1259,7 @@ html[data-motion="idle"] .strip .dot {
         <circle cx="4" cy="4" r="2.6" fill="var(--p-ivory-black)" />
       </marker>
     </defs>`;
-    let out = defs;
+    let out = '';
     edges.forEach((e, ei) => {
       const srcEls = e.sources.map(id => $(`.node[data-id="${id}"]`)).filter(Boolean);
       const tgtEls = e.targets.map(id => $(`.node[data-id="${id}"]`)).filter(Boolean);
@@ -1341,7 +1353,11 @@ html[data-motion="idle"] .strip .dot {
       });
     });
 
-    edgesSvg.innerHTML = out;
+    edgeBuildScroll.x = window.scrollX;
+    edgeBuildScroll.y = window.scrollY;
+    edgesSvg.innerHTML = defs + '<g id="edgeRoot">' + out + '</g>';
+    // Rebuild wipes data-match stamps — force the frame loop to re-resolve.
+    lastHoverId = null;
     if (!loopActive && typeof edgesSvg.pauseAnimations === 'function') {
       edgesSvg.pauseAnimations();
     }
@@ -1643,7 +1659,7 @@ html[data-motion="idle"] .strip .dot {
     wakePhysics();
   });
   window.addEventListener('scroll', () => {
-    recompute();
+    positionEdges();
     wakePhysics();
   }, { passive: true });
   setTimeout(() => recompute({ reserve: true }), 80);
