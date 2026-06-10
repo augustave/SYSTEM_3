@@ -16,14 +16,15 @@ window.__ONTOLOGY__ = {
     structuredBy: "MO",
     physics: "ν&lt;0 · 1-DOF",
     terminal: "V-β TERMINAL",
-    metaRelations: "7 META-RELS · 3 VECTORS",
-    count: "N = 09 (1·META / 8·CANON)"
+    metaRelations: "7 META-RELS"
   },
 
   clusters: [
     {
       id: "01",
       name: "Cognitive Architecture",
+      abbrev: "COGNITIVE ARCH.",
+      color: "var(--p-ivory-black)",
       desc: "Mechanics of decision-making, bias, and culture formulation.",
       renderMode: "RAW TEXT · HIGH CONTRAST · STARK GRID",
       patternId: "m01a",
@@ -37,6 +38,8 @@ window.__ONTOLOGY__ = {
     {
       id: "02",
       name: "Network Topology",
+      abbrev: "NETWORK TOPO.",
+      color: "var(--p-prussian-blue)",
       desc: "The mathematical and spatial rules of connected systems.",
       renderMode: "WIREFRAME · BOUNDING BOX · TESSELLATION",
       patternId: "m02a",
@@ -51,6 +54,8 @@ window.__ONTOLOGY__ = {
     {
       id: "03",
       name: "Tactical Swarm Dynamics",
+      abbrev: "SWARM DYNAMICS",
+      color: "var(--p-vermillion)",
       desc: "Coordination, defense, and maneuverability under hostile conditions.",
       renderMode: "KINEMATIC · VECTOR · RED ACCENT",
       patternId: "m03a",
@@ -65,9 +70,9 @@ window.__ONTOLOGY__ = {
   ],
 
   edges: [
-    { name: "V-α", title: "OODA → CAPITAL",        sources: ["CERTAIN_TO_WIN"], targets: ["RWO"],        color: "var(--p-chrome-yellow)", stroke: 2.4, accent: "var(--p-vermillion)",   dash: "0",   bend:  0.26, animType: "packet", speed: "1.2s" },
-    { name: "V-β", title: "TOPOLOGICAL DEFENSE",   sources: ["PATTERN"],        targets: ["KM_ANCHOR"],  color: "var(--p-ultramarine)",   stroke: 1.8, accent: "var(--p-alizarin)",     dash: "6 3", bend: -0.22, animType: "crawl",  speed: "3s"   },
-    { name: "V-γ", title: "INFO → KINETIC",        sources: ["SHANNON"],        targets: ["BOYD"],       color: "var(--p-vermillion)",    stroke: 2.2, accent: "var(--p-ivory-black)",  dash: "0",   bend:  0.18, animType: "packet", speed: "0.8s" }
+    { name: "V-α", title: "OODA → CAPITAL",        legend: "OODA → CAPITAL · CTW → RWO", sources: ["CERTAIN_TO_WIN"], targets: ["RWO"],        color: "var(--p-chrome-yellow)", stroke: 2.4, accent: "var(--p-vermillion)",   dash: "0",   bend:  0.26, animType: "packet", speed: "1.2s" },
+    { name: "V-β", title: "TOPOLOGICAL DEFENSE",   legend: "TOPO · DEFENSE · PAT → KM",  sources: ["PATTERN"],        targets: ["KM_ANCHOR"],  color: "var(--p-ultramarine)",   stroke: 1.8, accent: "var(--p-alizarin)",     dash: "6 3", bend: -0.22, animType: "crawl",  speed: "3s"   },
+    { name: "V-γ", title: "INFO → KINETIC",        legend: "INFO → KINETIC",             sources: ["SHANNON"],        targets: ["BOYD"],       color: "var(--p-vermillion)",    stroke: 2.2, accent: "var(--p-ivory-black)",  dash: "0",   bend:  0.18, animType: "packet", speed: "0.8s" }
   ],
 
   ghosts: [

@@ -30,21 +30,21 @@ if (!ontology || typeof ontology !== 'object') {
   if (!ontology.metaAnchor || typeof ontology.metaAnchor !== 'object') {
     fail('ontology.metaAnchor is required');
   } else {
-    ['id', 'ref', 'label', 'type', 'terminal', 'metaRelations', 'count'].forEach((field) => {
+    ['id', 'ref', 'label', 'type', 'terminal', 'metaRelations'].forEach((field) => {
       requireString(ontology.metaAnchor, field, 'metaAnchor');
     });
   }
 
-  if (!Array.isArray(ontology.clusters) || ontology.clusters.length !== 3) {
-    fail('ontology.clusters must contain exactly 3 clusters');
+  if (!Array.isArray(ontology.clusters) || ontology.clusters.length === 0) {
+    fail('ontology.clusters must contain at least one cluster');
   }
 
-  if (!Array.isArray(ontology.edges) || ontology.edges.length !== 3) {
-    fail('ontology.edges must contain exactly 3 edges');
+  if (!Array.isArray(ontology.edges) || ontology.edges.length === 0) {
+    fail('ontology.edges must contain at least one edge');
   }
 
-  if (!Array.isArray(ontology.ghosts) || ontology.ghosts.length !== 3) {
-    fail('ontology.ghosts must contain exactly 3 ghosts');
+  if (!Array.isArray(ontology.ghosts)) {
+    fail('ontology.ghosts must be an array');
   }
 
   const activeIds = new Set();
@@ -61,7 +61,7 @@ if (!ontology || typeof ontology !== 'object') {
   let clusteredNodeCount = 0;
   (ontology.clusters || []).forEach((cluster, clusterIndex) => {
     const label = `clusters[${clusterIndex}]`;
-    ['id', 'name', 'desc', 'renderMode', 'patternId', 'patternSvg', 'patternSize'].forEach((field) => {
+    ['id', 'name', 'abbrev', 'color', 'desc', 'renderMode', 'patternId', 'patternSvg', 'patternSize'].forEach((field) => {
       requireString(cluster, field, label);
     });
     if (!Array.isArray(cluster.nodes) || cluster.nodes.length === 0) {
@@ -86,9 +86,6 @@ if (!ontology || typeof ontology !== 'object') {
     });
   });
 
-  if (clusteredNodeCount !== 8) {
-    fail(`clustered canonical node count must be 8, got ${clusteredNodeCount}`);
-  }
 
   (ontology.edges || []).forEach((edge, edgeIndex) => {
     const label = `edges[${edgeIndex}]`;
@@ -118,9 +115,6 @@ if (!ontology || typeof ontology !== 'object') {
     ghostIds.add(ghost.id);
   });
 
-  if (activeIds.size !== 9) {
-    fail(`active node count must be 9, got ${activeIds.size}`);
-  }
 }
 
 if (errors.length > 0) {
@@ -129,4 +123,8 @@ if (errors.length > 0) {
   process.exit(1);
 }
 
-console.log('Ontology validation passed: 9 active nodes, 3 edges, 3 ghosts.');
+const activeTotal = 1 + (ontology.clusters || []).reduce((acc, c) => acc + (c.nodes || []).length, 0);
+console.log(
+  `Ontology validation passed: ${activeTotal} active nodes (1 meta + ${activeTotal - 1} canon), ` +
+  `${(ontology.edges || []).length} edges, ${(ontology.ghosts || []).length} ghosts.`
+);

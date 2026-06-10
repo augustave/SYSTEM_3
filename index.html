@@ -790,7 +790,7 @@ html[data-motion="idle"] .strip .dot {
   <header class="head">
     <div class="lockup">
       <div class="cat">PLATE 01 · OPERATIONAL BLUEPRINT</div>
-      <h1>SYSTEM_3 <em>v1.5.0</em></h1>
+      <h1>SYSTEM_3 <em id="heroVer">v—</em></h1>
       <div class="sub">A topological knowledge mesh. Nine active nodes across one meta-root and three clusters, bound by three entanglement vectors. Nodes do not load — they <b>unfold from a continuous mesh substrate</b> on observer proximity, governed per frame by integrated spring physics and sympathy ripple. The ontology is the interface.</div>
     </div>
     <div class="head-meta">
@@ -805,17 +805,8 @@ html[data-motion="idle"] .strip .dot {
     </div>
   </header>
 
-  <!-- LEGEND -->
-  <div class="legend">
-    <div><span class="sw" style="background:var(--p-ivory-black)"></span><span class="k">C·01</span> COGNITIVE ARCH.</div>
-    <div><span class="sw" style="background:var(--p-prussian-blue)"></span><span class="k">C·02</span> NETWORK TOPO.</div>
-    <div><span class="sw" style="background:var(--p-vermillion)"></span><span class="k">C·03</span> SWARM DYNAMICS</div>
-    <div><span class="sw" style="background:var(--p-chrome-yellow)"></span><span class="k">V·α</span> OODA → CAPITAL · CTW → RWO</div>
-    <div><span class="sw" style="background:var(--p-ultramarine)"></span><span class="k">V·β</span> TOPO · DEFENSE · PAT → KM</div>
-    <div><span class="sw" style="background:var(--p-vermillion)"></span><span class="k">V·γ</span> INFO → KINETIC</div>
-    <div><span class="sw" style="background:var(--p-alizarin); border-style:dashed"></span><span class="k">DEPR</span> R1.2 RESIDUE</div>
-    <div><span class="sw" style="background:var(--p-viridian)"></span><span class="k">TYPE</span> CLASSIFIER TAG</div>
-  </div>
+  <!-- LEGEND (Data-Driven) -->
+  <div class="legend" id="cms-legend"></div>
 
   <!-- MESH -->
   <main class="mesh" id="mesh">
@@ -860,7 +851,7 @@ html[data-motion="idle"] .strip .dot {
   <div class="titleblock">
     <div>
       <span class="k">SHEET TITLE</span>
-      <span class="v v--big">KNOWLEDGE_MESH v1.5.0 · PLATE 01</span>
+      <span class="v v--big" id="tbVer">KNOWLEDGE_MESH · PLATE 01</span>
     </div>
     <div>
       <span class="k">PROJECT</span>
@@ -887,7 +878,7 @@ html[data-motion="idle"] .strip .dot {
   <!-- BOTTOM STRIP -->
   <div class="bottom-strip">
     <span>SYSTEM_3 · KNOWLEDGE_MESH <span class="sep">//</span> TOPOLOGICAL ONTOLOGY</span>
-    <span style="text-align:center">NODE 09/09 · EDGE 03/03 · GHOST 03 · FPS <span id="fps">—</span> · PROX-MIN <span id="pmin">∞</span></span>
+    <span style="text-align:center">NODE <span id="statNodes">—</span> · EDGE <span id="statEdges">—</span> · GHOST <span id="statGhosts">—</span> · FPS <span id="fps">—</span> · PROX-MIN <span id="pmin">∞</span></span>
     <span>REV <span id="rev2">—</span> · END OF SHEET</span>
   </div>
 
@@ -961,10 +952,16 @@ html[data-motion="idle"] .strip .dot {
   const ontologyData = window.__ONTOLOGY__.clusters;
   const ontologyRevision = window.__ONTOLOGY__.revision || '1.5.0';
 
+  // Derived topology counts — single source: ontology.js
+  const canonCount = ontologyData.reduce((acc, c) => acc + c.nodes.length, 0);
+  const activeCount = canonCount + 1; // + Tier 0 meta-root
+  const pad2 = n => String(n).padStart(2, '0');
+
   // Render Tier 0 meta-root from ontology data.
   function renderMetaAnchor() {
     const m = window.__ONTOLOGY__.metaAnchor;
     if (!metaTrg || !m) return;
+    const vectorCount = window.__ONTOLOGY__.edges.length;
     metaTrg.innerHTML = `
       <div class="node" data-id="${m.id}" style="
         margin: 0 0 44px; padding: 14px 20px;
@@ -990,9 +987,9 @@ html[data-motion="idle"] .strip .dot {
           text-transform: uppercase; color: var(--p-alizarin);
           border: 1px solid var(--p-alizarin); padding: 3px 7px;">${m.terminal}</span>
         <span style="font-family: var(--mono); font-size: 9px; letter-spacing: 0.14em;
-          text-transform: uppercase; color: var(--p-raw-umber);">${m.metaRelations}</span>
+          text-transform: uppercase; color: var(--p-raw-umber);">${m.metaRelations} · ${vectorCount} VECTORS</span>
         <span style="font-family: var(--mono); font-size: 9px; letter-spacing: 0.14em;
-          text-transform: uppercase; color: var(--p-burnt-sienna);">${m.count}</span>
+          text-transform: uppercase; color: var(--p-burnt-sienna);">N = ${pad2(activeCount)} (1·META / ${canonCount}·CANON)</span>
       </div>
     `;
   }
@@ -1053,10 +1050,47 @@ html[data-motion="idle"] .strip .dot {
     `).join('');
   }
 
+  // Render legend rows from clusters + edges, plus static classifier keys.
+  function renderLegend() {
+    const legendTrg = $('#cms-legend');
+    if (!legendTrg) return;
+    const rows = [];
+    ontologyData.forEach(c => {
+      rows.push(`<div><span class="sw" style="background:${c.color}"></span><span class="k">C·${c.id}</span> ${c.abbrev || c.name}</div>`);
+    });
+    window.__ONTOLOGY__.edges.forEach(e => {
+      rows.push(`<div><span class="sw" style="background:${e.color}"></span><span class="k">${e.name.replace('-', '·')}</span> ${e.legend || e.title}</div>`);
+    });
+    rows.push(`<div><span class="sw" style="background:var(--p-alizarin); border-style:dashed"></span><span class="k">DEPR</span> R1.2 RESIDUE</div>`);
+    rows.push(`<div><span class="sw" style="background:var(--p-viridian)"></span><span class="k">TYPE</span> CLASSIFIER TAG</div>`);
+    legendTrg.style.gridTemplateColumns = `repeat(${rows.length}, 1fr)`;
+    legendTrg.innerHTML = rows.join('');
+  }
+
+  // Fill footer counters and version strings from ontology.
+  function renderStats() {
+    const ghostCount = (window.__ONTOLOGY__.ghosts || []).length;
+    const edgeCount = window.__ONTOLOGY__.edges.length;
+    const statNodes = $('#statNodes');
+    const statEdges = $('#statEdges');
+    const statGhosts = $('#statGhosts');
+    if (statNodes) statNodes.textContent = `${pad2(activeCount)}/${pad2(activeCount)}`;
+    if (statEdges) statEdges.textContent = `${pad2(edgeCount)}/${pad2(edgeCount)}`;
+    if (statGhosts) statGhosts.textContent = pad2(ghostCount);
+
+    const heroVer = $('#heroVer');
+    const tbVer = $('#tbVer');
+    if (heroVer) heroVer.textContent = `v${ontologyRevision}`;
+    if (tbVer) tbVer.textContent = `KNOWLEDGE_MESH v${ontologyRevision} · PLATE 01`;
+    document.title = `SYSTEM_3 // KNOWLEDGE_MESH v${ontologyRevision}`;
+  }
+
   // Generate DOM nodes FIRST
   renderMetaAnchor();
   renderOntology();
   renderGhosts();
+  renderLegend();
+  renderStats();
 
   // dynamic global node tracking & state registry
   const nodes = $$('.node');
