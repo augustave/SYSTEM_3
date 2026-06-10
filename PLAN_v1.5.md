@@ -32,7 +32,7 @@ The earlier `ontology.json` plan was intentionally replaced by a script-loaded o
 | File | Role |
 |------|------|
 | `index.html` | Main runtime, styling, markup shell, physics loop, vector renderer. |
-| `SYSTEM_3_KNOWLEDGE_MESH.html` | Canonical filename copy of `index.html`. |
+| `SYSTEM_3_KNOWLEDGE_MESH.html` | Redirect stub → `index.html` (historical filename). |
 | `ontology.js` | Single source of truth for meta-root, clusters, edges, and ghosts. |
 | `validate-ontology.js` | Local consistency check for ontology shape and references. |
 

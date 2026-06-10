@@ -14,7 +14,7 @@ Nine active nodes: one Tier 0 meta-root plus eight clustered canonical nodes, bo
 |------|------|
 | `index.html` | Runtime — CSS, markup, physics engine. |
 | `ontology.js` | **Single source of truth.** Edit this to mutate the mesh — nodes, vectors, ghosts. No HTML changes required. |
-| `SYSTEM_3_KNOWLEDGE_MESH.html` | Canonical filename copy of `index.html`. |
+| `SYSTEM_3_KNOWLEDGE_MESH.html` | Redirect stub → `index.html` (historical filename, kept for old links). |
 | `PLAN_v1.5.md` | v1.5 implementation record and remaining scope notes. |
 | `system_3_A.md` | Earlier spec directive (v1.3 → v1.4 upgrade). |
 | `validate-ontology.js` | Local consistency check for ontology IDs, counts, edge targets, and required fields. |
@@ -50,5 +50,7 @@ node validate-ontology.js
 Expected result:
 
 ```text
-Ontology validation passed: 9 active nodes, 3 edges, 3 ghosts.
+Ontology validation passed: 9 active nodes (1 meta + 8 canon), 3 edges, 3 ghosts.
 ```
+
+Counts are derived from `ontology.js`, so they track whatever the ontology currently declares. CI runs the same checks on every push (`.github/workflows/validate.yml`).
