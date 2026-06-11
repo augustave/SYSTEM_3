@@ -21,11 +21,15 @@ Nine active nodes: one Tier 0 meta-root plus eight clustered canonical nodes, bo
 
 ## Interactions
 
-- **Hover a node** — it unfolds via a fixed-step damped spring (K=210, C=30, M=1) within a 280 px proximity radius.
-- **Ripple wake** — nearby nodes within 420 px get partially cracked open by the spatial sympathy coefficient (0.28), with edge-linked nodes receiving topological sympathy (0.18) even outside direct range.
-- **Vector highlighting** — when a node's `baseT` exceeds 0.55, incident vectors glow and non-incident vectors dim to 16 % opacity.
+- **Hover a node** — it unfolds via a fixed-step underdamped spring (K=210, C=19, M=1, ζ≈0.66) within a 280 px proximity radius, overshooting ~5 % and settling in ~520 ms with a paper-snap. Open folds tilt up to 4° toward the pointer.
+- **Ripple wake** — nearby nodes within 420 px get partially cracked open by the spatial sympathy coefficient (0.28), with edge-linked nodes receiving topological sympathy (0.18) even outside direct range. First-order ripple retransmits once more at 0.45 decay, so waves cascade through the mesh.
+- **Vector highlighting** — hover acquisition uses hysteresis (enter 0.55 / exit 0.42 / challenger margin 0.08) to prevent flicker; incident vectors glow while non-incident vectors dim to 16 % opacity and unrelated nodes recede to 55 %.
+- **Click to pin** — clicking a foldable node locks it open with an outline and `◉ PINNED` stamp; its vectors stay highlighted while you hover elsewhere. Escape releases all pins.
+- **Keyboard** — Tab focuses and unfolds nodes (no pointer needed); Enter/Space toggles pin. Nodes expose `role="button"`, `aria-label`, and `aria-pressed`.
 - **Sympathetic outline** — nodes being opened purely by ripple (ripple > 0.08, direct baseT < 0.3) get a vermillion 1 px ring.
+- **Reduced motion** — `prefers-reduced-motion` snaps springs instantly and omits packet/crawl/pulse animations.
 - **Idle sleep** — when the pointer leaves and every spring reaches rest, the physics loop, clock timer, and decorative SVG/CSS animations pause until the next interaction.
+- **Cursor readout** — live X/Y/proximity plus the hovered node id and unfold percentage.
 
 ## Vectors
 
