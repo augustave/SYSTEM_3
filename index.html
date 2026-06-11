@@ -1293,11 +1293,6 @@ html[data-motion="idle"] .strip .dot {
   }
 
   // ─── layout helpers ─────────────────────────────────────────────────────
-  function viewportAnchor(el) {
-    const r = el.getBoundingClientRect();
-    return { x: r.left + r.width / 2, y: r.top + r.height * 0.3 };
-  }
-
   function updateCenters() {
     const mr = mesh.getBoundingClientRect();
     nodes.forEach(n => {
@@ -1346,18 +1341,12 @@ html[data-motion="idle"] .strip .dot {
   }
 
   // ─── edge render (polyline with inflection) ─────────────────────────────
-  // Geometry is built in viewport coordinates at build-time scroll position;
-  // scrolling only translates #edgeRoot instead of rebuilding the SVG, so
-  // <animate> packet phases survive scroll.
-  const edgeBuildScroll = { x: 0, y: 0 };
+  // Structure is built once; geometry is re-anchored EVERY FRAME to the live
+  // panel borders, so vectors stay stuck to nodes through unfold, pin, scroll
+  // and any layout shift. Anchors sit on the rect border facing the peer.
   let packetRefs = [];   // JS-driven packet overlays — speed coupled to endpoint unfold
-
-  function positionEdges() {
-    const root = edgesSvg.querySelector('#edgeRoot');
-    if (!root) return;
-    root.setAttribute('transform',
-      `translate(${edgeBuildScroll.x - window.scrollX}, ${edgeBuildScroll.y - window.scrollY})`);
-  }
+  let edgeGeoms = [];    // per edge-pair cached element refs for geometry updates
+  const nodeById = new Map(nodes.map(n => [n.dataset.id, n]));
 
   function drawEdges() {
     const layer = edgesSvg.parentElement;
@@ -1394,43 +1383,21 @@ html[data-motion="idle"] .strip .dot {
         <circle cx="4" cy="4" r="2.6" fill="var(--p-ivory-black)" />
       </marker>
     </defs>`;
+    // Emit one <g class="edge-pair"> per src→tgt pair. Geometry placeholders
+    // are zeroed; updateEdgeGeometry() fills them immediately after build.
     let out = '';
-    edges.forEach((e, ei) => {
-      const srcEls = e.sources.map(id => $(`.node[data-id="${id}"]`)).filter(Boolean);
-      const tgtEls = e.targets.map(id => $(`.node[data-id="${id}"]`)).filter(Boolean);
-
-      srcEls.forEach((s, si) => {
-        tgtEls.forEach((t, ti) => {
-          const a = viewportAnchor(s);
-          const b = viewportAnchor(t);
-
-          // polyline with inflection — orthogonal-ish routing with one bend at 60%
-          const infX = a.x + (b.x - a.x) * 0.55;
-          const infY = a.y + (b.y - a.y) * 0.45;
-
-          // perpendicular offset for visual tension
-          const dx = b.x - a.x, dy = b.y - a.y;
-          const len = Math.hypot(dx, dy);
-          const nx = -dy / len, ny = dx / len;
-          const off = Math.min(100, len * Math.abs(e.bend));
-          const bendSign = e.bend >= 0 ? 1 : -1;
-          const bx = infX + nx * off * bendSign;
-          const by = infY + ny * off * bendSign;
-
-          // Dynamic Polyline Pathing with Animation Overlays
-          const pts = `${a.x},${a.y} ${bx},${by} ${b.x},${b.y}`;
-          const hColor = e.color.includes('chrome') ? 'chrome' : (e.color.includes('vermillion') ? 'vermillion' : 'prussian');
-          const srcId = e.sources[si];
-          const tgtId = e.targets[ti];
-          // Shared tagging string — lets the highlight layer resolve incidence.
-          const tag = `data-edge="${e.name}" data-src="${srcId}" data-tgt="${tgtId}"`;
+    edges.forEach(e => {
+      const hColor = e.color.includes('chrome') ? 'chrome' : (e.color.includes('vermillion') ? 'vermillion' : 'prussian');
+      e.sources.forEach(srcId => {
+        e.targets.forEach(tgtId => {
+          if (!nodeById.has(srcId) || !nodeById.has(tgtId)) return;
+          out += `<g class="edge-pair" data-edge="${e.name}" data-src="${srcId}" data-tgt="${tgtId}" data-bend="${e.bend}" data-name="${e.name}" data-title="${e.title}">`;
 
           // Shadow track
-          out += `<polyline ${tag} points="${pts}" fill="none" stroke="${e.accent}" stroke-width="${e.stroke + 3}" stroke-opacity="0.14" stroke-linejoin="miter"/>`;
+          out += `<polyline class="l-shadow" points="0,0 0,0 0,0" fill="none" stroke="${e.accent}" stroke-width="${e.stroke + 3}" stroke-opacity="0.14" stroke-linejoin="miter"/>`;
 
           // Main primary track
-          out += `<polyline ${tag} points="${pts}" fill="none" stroke="${e.color}" stroke-width="${e.stroke}" stroke-dasharray="${e.dash}" stroke-linejoin="miter" marker-start="url(#tail-dot)" marker-end="url(#head-${hColor})">`;
-
+          out += `<polyline class="l-main" points="0,0 0,0 0,0" fill="none" stroke="${e.color}" stroke-width="${e.stroke}" stroke-dasharray="${e.dash}" stroke-linejoin="miter" marker-start="url(#tail-dot)" marker-end="url(#head-${hColor})">`;
           if (e.animType === 'crawl' && !reducedMotion) {
             out += `<animate attributeName="stroke-dashoffset" values="18;0" dur="${e.speed}" repeatCount="indefinite"/>`;
           }
@@ -1440,69 +1407,158 @@ html[data-motion="idle"] .strip .dot {
           // physics loop; rate scales with endpoint activation (motion = state)
           if (e.animType === 'packet' && !reducedMotion) {
             const pxPerSec = (40 / (parseFloat(e.speed) || 1)).toFixed(2);
-            out += `<polyline ${tag} class="packet-line" data-speed="${pxPerSec}" points="${pts}" fill="none" stroke="${e.accent}" stroke-width="${e.stroke + 1.8}" stroke-dasharray="4 36" stroke-dashoffset="0" stroke-linecap="round" stroke-linejoin="miter" pointer-events="none"/>`;
+            out += `<polyline class="packet-line" data-speed="${pxPerSec}" points="0,0 0,0 0,0" fill="none" stroke="${e.accent}" stroke-width="${e.stroke + 1.8}" stroke-dasharray="4 36" stroke-dashoffset="0" stroke-linecap="round" stroke-linejoin="miter" pointer-events="none"/>`;
           }
 
           // inflection marker — small open square
-          out += `<rect ${tag} x="${bx-4}" y="${by-4}" width="8" height="8" fill="var(--p-lead-white)" stroke="var(--p-ivory-black)" stroke-width="1"/>`;
-          out += `<rect ${tag} x="${bx-2}" y="${by-2}" width="4" height="4" fill="${e.accent}"/>`;
+          out += `<rect class="inf-outer" x="0" y="0" width="8" height="8" fill="var(--p-lead-white)" stroke="var(--p-ivory-black)" stroke-width="1"/>`;
+          out += `<rect class="inf-inner" x="0" y="0" width="4" height="4" fill="${e.accent}"/>`;
 
-          // tension ticks along segments
-          function ticks(p0, p1, n = 3) {
-            for (let i = 1; i <= n; i++) {
-              const tk = i / (n + 1);
-              const px = p0.x + (p1.x - p0.x) * tk;
-              const py = p0.y + (p1.y - p0.y) * tk;
-              const tdx = p1.x - p0.x, tdy = p1.y - p0.y;
-              const tl = Math.hypot(tdx, tdy);
-              const tnx = -tdy / tl, tny = tdx / tl;
-              out += `<line ${tag} x1="${px + tnx*3}" y1="${py + tny*3}" x2="${px - tnx*3}" y2="${py - tny*3}"
-                stroke="${e.accent}" stroke-width="0.8" stroke-opacity="0.7"/>`;
-            }
+          // tension ticks — 3 per segment
+          for (let i = 0; i < 6; i++) {
+            out += `<line class="tick" x1="0" y1="0" x2="0" y2="0" stroke="${e.accent}" stroke-width="0.8" stroke-opacity="0.7"/>`;
           }
-          ticks(a, { x: bx, y: by }, 3);
-          ticks({ x: bx, y: by }, b, 3);
 
           // midpoint forensic label
-          const midX = (a.x + b.x) / 2;
-          const midY = (a.y + b.y) / 2;
-          const angle = Math.round(Math.atan2(dy, dx) * 180 / Math.PI);
-          const label = `${e.name} · ${e.title} · LEN ${Math.round(len)} · ∠${angle}°`;
-          const tw = label.length * 5.4 + 16;
-          out += `<g ${tag} transform="translate(${midX}, ${midY})">
-            <rect ${tag} x="${-tw/2}" y="-9" width="${tw}" height="18"
+          out += `<g class="label-g" transform="translate(0,0)">
+            <rect class="label-rect" x="0" y="-9" width="0" height="18"
               fill="var(--p-lead-white)" stroke="var(--p-ivory-black)" stroke-width="0.9"/>
-            <text ${tag} x="0" y="3.2" text-anchor="middle"
+            <text class="label-text" x="0" y="3.2" text-anchor="middle"
               font-family="IBM Plex Mono, monospace" font-size="9"
-              letter-spacing="0.08em" fill="var(--p-ivory-black)">${label}</text>
+              letter-spacing="0.08em" fill="var(--p-ivory-black)"></text>
           </g>`;
 
           // source / target ID labels near endpoints
-          out += `<text ${tag} x="${a.x + 8}" y="${a.y - 6}"
+          out += `<text class="src-text" x="0" y="0"
             font-family="IBM Plex Mono, monospace" font-size="8.5"
             letter-spacing="0.12em" fill="var(--p-raw-umber)">SRC · ${srcId}</text>`;
-          out += `<text ${tag} x="${b.x + 8}" y="${b.y - 6}"
+          out += `<text class="tgt-text" x="0" y="0"
             font-family="IBM Plex Mono, monospace" font-size="8.5"
             letter-spacing="0.12em" fill="var(--p-alizarin)">TGT · ${tgtId}</text>`;
+
+          out += `</g>`;
         });
       });
     });
 
-    edgeBuildScroll.x = window.scrollX;
-    edgeBuildScroll.y = window.scrollY;
     edgesSvg.innerHTML = defs + '<g id="edgeRoot">' + out + '</g>';
     // Rebuild wipes data-match stamps — force the frame loop to re-resolve.
     lastHighlightSig = null;
-    packetRefs = Array.from(edgesSvg.querySelectorAll('.packet-line')).map(el => ({
-      el,
-      src: el.getAttribute('data-src'),
-      tgt: el.getAttribute('data-tgt'),
-      speed: parseFloat(el.getAttribute('data-speed')) || 30,
+
+    edgeGeoms = Array.from(edgesSvg.querySelectorAll('.edge-pair')).map(g => ({
+      src: g.dataset.src,
+      tgt: g.dataset.tgt,
+      bend: parseFloat(g.dataset.bend) || 0,
+      name: g.dataset.name,
+      title: g.dataset.title,
+      shadow: g.querySelector('.l-shadow'),
+      main: g.querySelector('.l-main'),
+      packet: g.querySelector('.packet-line'),
+      infOuter: g.querySelector('.inf-outer'),
+      infInner: g.querySelector('.inf-inner'),
+      ticks: Array.from(g.querySelectorAll('.tick')),
+      labelG: g.querySelector('.label-g'),
+      labelRect: g.querySelector('.label-rect'),
+      labelText: g.querySelector('.label-text'),
+      srcText: g.querySelector('.src-text'),
+      tgtText: g.querySelector('.tgt-text'),
+      lastSig: '',
+      lastLabel: ''
+    }));
+
+    packetRefs = edgeGeoms.filter(geo => geo.packet).map(geo => ({
+      el: geo.packet,
+      src: geo.src,
+      tgt: geo.tgt,
+      speed: parseFloat(geo.packet.getAttribute('data-speed')) || 30,
       offset: 0
     }));
+
+    updateEdgeGeometry();
+
     if (!loopActive && typeof edgesSvg.pauseAnimations === 'function') {
       edgesSvg.pauseAnimations();
     }
+  }
+
+  // Re-anchor every vector to the live panel borders. Anchor = intersection
+  // of the center-to-center ray with each node's rectangle (+4px outset).
+  function updateEdgeGeometry() {
+    if (!edgeGeoms.length) return;
+    const rects = new Map();
+    const getRect = id => {
+      if (!rects.has(id)) {
+        const el = nodeById.get(id);
+        rects.set(id, el ? el.getBoundingClientRect() : null);
+      }
+      return rects.get(id);
+    };
+
+    edgeGeoms.forEach(geo => {
+      const r1 = getRect(geo.src), r2 = getRect(geo.tgt);
+      if (!r1 || !r2) return;
+
+      const c1x = r1.left + r1.width / 2,  c1y = r1.top + r1.height / 2;
+      const c2x = r2.left + r2.width / 2,  c2y = r2.top + r2.height / 2;
+      const dx = c2x - c1x, dy = c2y - c1y;
+
+      // ray ∩ rect border, scaled to a +4px outset shell
+      const hitT = (r, ddx, ddy) =>
+        1 / Math.max(Math.abs(ddx) / (r.width / 2 + 4), Math.abs(ddy) / (r.height / 2 + 4), 1e-6);
+      const t1 = Math.min(0.5, hitT(r1, dx, dy));
+      const t2 = Math.min(0.5, hitT(r2, dx, dy));
+      const ax = c1x + dx * t1, ay = c1y + dy * t1;
+      const bx2 = c2x - dx * t2, by2 = c2y - dy * t2;
+
+      const sig = `${ax | 0},${ay | 0},${bx2 | 0},${by2 | 0}`;
+      if (sig === geo.lastSig) return;
+      geo.lastSig = sig;
+
+      const ddx = bx2 - ax, ddy = by2 - ay;
+      const len = Math.hypot(ddx, ddy) || 1;
+      const infX = ax + ddx * 0.55, infY = ay + ddy * 0.45;
+      const nx = -ddy / len, ny = ddx / len;
+      const off = Math.min(100, len * Math.abs(geo.bend));
+      const sgn = geo.bend >= 0 ? 1 : -1;
+      const bx = infX + nx * off * sgn, by = infY + ny * off * sgn;
+
+      const pts = `${ax},${ay} ${bx},${by} ${bx2},${by2}`;
+      geo.shadow.setAttribute('points', pts);
+      geo.main.setAttribute('points', pts);
+      if (geo.packet) geo.packet.setAttribute('points', pts);
+
+      geo.infOuter.setAttribute('x', bx - 4); geo.infOuter.setAttribute('y', by - 4);
+      geo.infInner.setAttribute('x', bx - 2); geo.infInner.setAttribute('y', by - 2);
+
+      const segs = [[{ x: ax, y: ay }, { x: bx, y: by }], [{ x: bx, y: by }, { x: bx2, y: by2 }]];
+      segs.forEach((seg, si) => {
+        const [p0, p1] = seg;
+        const tdx = p1.x - p0.x, tdy = p1.y - p0.y;
+        const tl = Math.hypot(tdx, tdy) || 1;
+        const tnx = -tdy / tl, tny = tdx / tl;
+        for (let i = 1; i <= 3; i++) {
+          const tk = i / 4;
+          const px = p0.x + tdx * tk, py = p0.y + tdy * tk;
+          const ln = geo.ticks[si * 3 + i - 1];
+          ln.setAttribute('x1', px + tnx * 3); ln.setAttribute('y1', py + tny * 3);
+          ln.setAttribute('x2', px - tnx * 3); ln.setAttribute('y2', py - tny * 3);
+        }
+      });
+
+      geo.labelG.setAttribute('transform', `translate(${(ax + bx2) / 2}, ${(ay + by2) / 2})`);
+      const angle = Math.round(Math.atan2(ddy, ddx) * 180 / Math.PI);
+      const label = `${geo.name} · ${geo.title} · LEN ${Math.round(len)} · ∠${angle}°`;
+      if (label !== geo.lastLabel) {
+        geo.lastLabel = label;
+        geo.labelText.textContent = label;
+        const tw = label.length * 5.4 + 16;
+        geo.labelRect.setAttribute('x', -tw / 2);
+        geo.labelRect.setAttribute('width', tw);
+      }
+
+      geo.srcText.setAttribute('x', ax + 8); geo.srcText.setAttribute('y', ay - 6);
+      geo.tgtText.setAttribute('x', bx2 + 8); geo.tgtText.setAttribute('y', by2 - 6);
+    });
   }
 
   function reserveExpansionSpace() {
@@ -1863,6 +1919,8 @@ html[data-motion="idle"] .strip .dot {
 
     applyNodeStyles(hoverNode, highlightIds, linkedIds);
 
+    // re-glue vectors to live panel borders — folds move layout every frame
+    updateEdgeGeometry();
     updateSubstrate();
 
     // advance packet telemetry — rate is a function of endpoint unfold
@@ -1971,7 +2029,7 @@ html[data-motion="idle"] .strip .dot {
     wakePhysics();
   });
   window.addEventListener('scroll', () => {
-    positionEdges();
+    updateEdgeGeometry();
     wakePhysics();
   }, { passive: true });
   setTimeout(() => recompute({ reserve: true }), 80);
