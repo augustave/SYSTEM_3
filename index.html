@@ -961,7 +961,9 @@ html[data-motion="idle"] .strip .dot {
     stiffness: 210,
     damping: 19,            // ζ ≈ 0.66 — underdamped: ~5% overshoot, paper-snap settle
     mass: 1,
-    proximity: 280,
+    // deprecated residue carries inertia — ghosts open sluggish and overdamped
+    tierOverrides: { ghost: { mass: 1.6, damping: 26 } },
+    proximity: 240,         // rect-distance field: measured to panel edge, not centroid
     fixedDt: 1 / 120,
     maxFrameDt: 0.08,
     maxSubsteps: 10,
@@ -1141,7 +1143,17 @@ html[data-motion="idle"] .strip .dot {
   // dynamic global node tracking & state registry
   const nodes = $$('.node');
   const state = new Map();
-  nodes.forEach(n => state.set(n, { u: 0, v: 0, t: 0, cx: 0, cy: 0, baseT: 0, ripple: 0, r1: 0, tiltTarget: 0, focused: false }));
+  nodes.forEach(n => {
+    const tier = n.classList.contains('node--ghost') ? PHYSICS.tierOverrides.ghost : null;
+    state.set(n, {
+      u: 0, v: 0, t: 0, cx: 0, cy: 0, hw: 0, hh: 0,
+      baseT: 0, ripple: 0, r1: 0, tiltTarget: 0, focused: false,
+      mass: tier ? tier.mass : PHYSICS.mass,
+      damping: tier ? tier.damping : PHYSICS.damping,
+      lastU: -1, lastTilt: 999
+    });
+  });
+  const stateById = new Map(nodes.map(n => [n.dataset.id, state.get(n)]));
 
   // Reduced motion: springs snap to target, telemetry animations are skipped.
   const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -1234,29 +1246,20 @@ html[data-motion="idle"] .strip .dot {
   }
 
   // ─── layout helpers ─────────────────────────────────────────────────────
-  function centerOf(el) {
-    const r = el.getBoundingClientRect();
-    const mr = mesh.getBoundingClientRect();
-    return { x: r.left - mr.left + r.width / 2, y: r.top - mr.top + r.height / 2 };
-  }
-
-  function anchorOf(el) {
-    // bottom-center anchor — edges emerge from bottom seam of the fold
-    const r = el.getBoundingClientRect();
-    const mr = mesh.getBoundingClientRect();
-    return { x: r.left - mr.left + r.width / 2, y: r.top - mr.top + r.height * 0.72 };
-  }
-
   function viewportAnchor(el) {
     const r = el.getBoundingClientRect();
     return { x: r.left + r.width / 2, y: r.top + r.height * 0.3 };
   }
 
   function updateCenters() {
+    const mr = mesh.getBoundingClientRect();
     nodes.forEach(n => {
-      const c = centerOf(n);
+      const r = n.getBoundingClientRect();
       const s = state.get(n);
-      s.cx = c.x; s.cy = c.y;
+      s.cx = r.left - mr.left + r.width / 2;
+      s.cy = r.top - mr.top + r.height / 2;
+      s.hw = r.width / 2;
+      s.hh = r.height / 2;
     });
   }
 
@@ -1470,8 +1473,8 @@ html[data-motion="idle"] .strip .dot {
       s.v = 0;
       return;
     }
-    const force = PHYSICS.stiffness * (s.t - s.u) - PHYSICS.damping * s.v;
-    s.v += (force / PHYSICS.mass) * dt;
+    const force = PHYSICS.stiffness * (s.t - s.u) - s.damping * s.v;
+    s.v += (force / s.mass) * dt;
     s.v = Math.max(-PHYSICS.maxVelocity, Math.min(PHYSICS.maxVelocity, s.v));
     s.u += s.v * dt;
 
@@ -1524,7 +1527,11 @@ html[data-motion="idle"] .strip .dot {
         s.baseT = 0;
         s.tiltTarget = 0;
       } else {
-        const d = Math.hypot(s.cx - lmx, s.cy - lmy);
+        // distance to panel rectangle, not centroid — pointer on a wide node
+        // reads as zero distance, so the panel fully opens under the cursor
+        const ddx = Math.max(0, Math.abs(lmx - s.cx) - s.hw);
+        const ddy = Math.max(0, Math.abs(lmy - s.cy) - s.hh);
+        const d = Math.hypot(ddx, ddy);
         if (d < minProx) minProx = d;
         s.baseT = smoothstep01(1 - d / PHYSICS.proximity);
         // pointer azimuth → rotateY tilt target, scaled by unfold in applyNodeStyles
@@ -1634,9 +1641,17 @@ html[data-motion="idle"] .strip .dot {
     const focusActive = highlightIds && highlightIds.size > 0;
     nodes.forEach(n => {
       const s = state.get(n);
-      n.style.setProperty('--u', s.u.toFixed(4));
+      // guard writes — settled nodes shouldn't trigger style recalc every frame
+      if (Math.abs(s.u - s.lastU) > 0.0005) {
+        n.style.setProperty('--u', s.u.toFixed(4));
+        s.lastU = s.u;
+      }
       // tilt only registers on open folds — scale by u so closed panels stay square
-      n.style.setProperty('--tilt', (s.tiltTarget * Math.min(1, s.u)).toFixed(3) + 'deg');
+      const tilt = s.tiltTarget * Math.min(1, s.u);
+      if (Math.abs(tilt - s.lastTilt) > 0.005) {
+        n.style.setProperty('--tilt', tilt.toFixed(3) + 'deg');
+        s.lastTilt = tilt;
+      }
 
       const isSympathetic =
         n !== hoverNode &&
