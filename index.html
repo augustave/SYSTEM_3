@@ -454,9 +454,10 @@ html[data-motion="idle"] .strip .dot {
   background: var(--ground);
   border: 1px solid var(--ink);
   transform-origin: 50% 100%;
-  /* rotateX driven by spring (1 - u) * 62deg */
+  /* rotateX driven by spring (1 - u) * 62deg; rotateY = pointer-azimuth tilt */
   transform:
     rotateX(calc((1 - var(--u)) * 62deg))
+    rotateY(var(--tilt, 0deg))
     translateY(calc(var(--u) * -4px));
   transition: none;
   filter: brightness(calc(0.78 + var(--u) * 0.22));
@@ -781,7 +782,7 @@ html[data-motion="idle"] .strip .dot {
     <span><span class="dot"></span>LIVE · MESH RENDER</span>
     <span>SYSTEM_3 · KNOWLEDGE MESH · TOPOLOGICAL ONTOLOGY <span class="sep">//</span> RESILIENT AUTONOMOUS SCALING</span>
     <span>SURFACE · MIURA-ORI · AUXETIC ν&lt;0 · 1-DOF</span>
-    <span>TRANSITIONS · FIXED-STEP SPRING K210·C30·M1</span>
+    <span>TRANSITIONS · FIXED-STEP SPRING K210·C19·M1 · ζ0.66</span>
     <span>INTERACTION · PROXIMITY-UNFOLD</span>
     <span id="clock">00:00:00 UTC</span>
   </div>
@@ -920,7 +921,7 @@ html[data-motion="idle"] .strip .dot {
   // SPRING — fixed-step semi-implicit integration for stable fold motion.
   const PHYSICS = {
     stiffness: 210,
-    damping: 30,
+    damping: 19,            // ζ ≈ 0.66 — underdamped: ~5% overshoot, paper-snap settle
     mass: 1,
     proximity: 280,
     fixedDt: 1 / 120,
@@ -932,8 +933,13 @@ html[data-motion="idle"] .strip .dot {
     rippleRange: 420,
     rippleSympathy: 0.28,
     topologySympathy: 0.18,
-    hoverThreshold: 0.55,
+    cascadeDecay: 0.45,     // second-order ripple retransmission (one pass, no feedback)
+    hoverEnter: 0.55,       // hysteresis: candidate must exceed to acquire hover
+    hoverExit: 0.42,        // incumbent keeps hover until baseT falls below
+    hoverMargin: 0.08,      // challenger must beat incumbent by this much
     sympathyThreshold: 0.08,
+    tiltMax: 4,             // deg — pointer-azimuth rotateY on open folds
+    tiltFalloff: 170,       // px — horizontal distance for full tilt
     restEpsilon: 0.00045,
     sleepEpsilon: 0.0015
   };
@@ -1095,7 +1101,7 @@ html[data-motion="idle"] .strip .dot {
   // dynamic global node tracking & state registry
   const nodes = $$('.node');
   const state = new Map();
-  nodes.forEach(n => state.set(n, { u: 0, v: 0, t: 0, cx: 0, cy: 0, baseT: 0, ripple: 0 }));
+  nodes.forEach(n => state.set(n, { u: 0, v: 0, t: 0, cx: 0, cy: 0, baseT: 0, ripple: 0, r1: 0, tiltTarget: 0 }));
 
   // ─── edge defs ──────────────────────────────────────────────────────────
   const edges = window.__ONTOLOGY__.edges;
@@ -1435,30 +1441,54 @@ html[data-motion="idle"] .strip .dot {
     }
   }
 
+  let currentHoverNode = null;
+
+  function resolveHover() {
+    // Hysteresis: incumbent keeps hover until it drops below hoverExit;
+    // a challenger must clear hoverEnter AND beat the incumbent by hoverMargin.
+    let candidate = null, candBase = 0;
+    nodes.forEach(n => {
+      const s = state.get(n);
+      if (s.baseT > candBase) { candBase = s.baseT; candidate = n; }
+    });
+
+    if (currentHoverNode) {
+      const incumbent = state.get(currentHoverNode).baseT;
+      if (incumbent < PHYSICS.hoverExit) {
+        currentHoverNode = (candidate && candBase >= PHYSICS.hoverEnter) ? candidate : null;
+      } else if (candidate && candidate !== currentHoverNode &&
+                 candBase >= PHYSICS.hoverEnter && candBase > incumbent + PHYSICS.hoverMargin) {
+        currentHoverNode = candidate;
+      }
+    } else if (candidate && candBase >= PHYSICS.hoverEnter) {
+      currentHoverNode = candidate;
+    }
+    return currentHoverNode;
+  }
+
   function updateTargets(lmx, lmy, pointerIsActive) {
     let minProx = Infinity;
 
+    // PASS 1: direct observation
     nodes.forEach(n => {
       const s = state.get(n);
       if (!pointerIsActive) {
         s.baseT = 0;
+        s.tiltTarget = 0;
         return;
       }
 
       const d = Math.hypot(s.cx - lmx, s.cy - lmy);
       if (d < minProx) minProx = d;
       s.baseT = smoothstep01(1 - d / PHYSICS.proximity);
+      // pointer azimuth → rotateY tilt target, scaled by unfold in applyNodeStyles
+      const dxn = Math.max(-1, Math.min(1, (lmx - s.cx) / PHYSICS.tiltFalloff));
+      s.tiltTarget = -dxn * PHYSICS.tiltMax;
     });
 
-    let hoverNode = null, hoverBase = 0;
-    nodes.forEach(n => {
-      const s = state.get(n);
-      if (s.baseT > hoverBase && s.baseT > PHYSICS.hoverThreshold) {
-        hoverBase = s.baseT;
-        hoverNode = n;
-      }
-    });
+    const hoverNode = resolveHover();
 
+    // PASS 2: first-order ripple (direct emitters only)
     nodes.forEach(n1 => {
       const s1 = state.get(n1);
       let ripple = 0;
@@ -1475,8 +1505,29 @@ html[data-motion="idle"] .strip .dot {
         ripple += s2.baseT * Math.max(spatial, linked);
       });
 
-      s1.ripple = ripple;
-      s1.t = Math.min(1, s1.baseT + ripple);
+      s1.r1 = ripple;
+    });
+
+    // PASS 3: cascade — first-order ripple retransmits once with decay.
+    // Single forward pass over precomputed r1: no feedback loop possible.
+    nodes.forEach(n1 => {
+      const s1 = state.get(n1);
+      let cascade = 0;
+      const id1 = n1.dataset.id;
+
+      nodes.forEach(n2 => {
+        if (n1 === n2) return;
+        const s2 = state.get(n2);
+        if (s2.r1 <= 0.04) return;
+
+        const dist = Math.hypot(s1.cx - s2.cx, s1.cy - s2.cy);
+        const spatial = smoothstep01(1 - dist / PHYSICS.rippleRange) * PHYSICS.rippleSympathy;
+        const linked = topology.get(id1)?.has(n2.dataset.id) ? PHYSICS.topologySympathy : 0;
+        cascade += s2.r1 * Math.max(spatial, linked) * PHYSICS.cascadeDecay;
+      });
+
+      s1.ripple = s1.r1 + cascade;
+      s1.t = Math.min(1, s1.baseT + s1.ripple);
     });
 
     return { minProx, hoverNode };
@@ -1486,6 +1537,8 @@ html[data-motion="idle"] .strip .dot {
     nodes.forEach(n => {
       const s = state.get(n);
       n.style.setProperty('--u', s.u.toFixed(4));
+      // tilt only registers on open folds — scale by u so closed panels stay square
+      n.style.setProperty('--tilt', (s.tiltTarget * Math.min(1, s.u)).toFixed(3) + 'deg');
 
       const isSympathetic =
         n !== hoverNode &&
