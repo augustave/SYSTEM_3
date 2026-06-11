@@ -752,6 +752,17 @@ html[data-motion="idle"] .strip .dot {
   padding: 1px 6px;
 }
 
+/* Keyboard focus ring — forensic dashed vermillion */
+.node:focus-visible {
+  outline: 2px dashed var(--p-vermillion);
+  outline-offset: 4px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .strip .dot { animation: none; }
+  .node { transition: none; }
+}
+
 /* ════════════════════════════════════════════════════════════════════════════
    CURSOR LAYER
    ════════════════════════════════════════════════════════════════════════════ */
@@ -1039,7 +1050,9 @@ html[data-motion="idle"] .strip .dot {
         <div class="render-state"><span class="rs-k">RENDER</span> ${c.renderMode}</div>
 
         ${c.nodes.map((n, i) => `
-          <article class="node" data-id="${n.id}" data-cluster="${c.id}">
+          <article class="node" data-id="${n.id}" data-cluster="${c.id}"
+            tabindex="0" role="button" aria-pressed="false"
+            aria-label="${n.title}. ${n.func}">
             <span class="reg">${n.ref}</span><span class="reg reg--alt">${n.alt}</span><span class="reg reg--type">${n.type}</span>
             <div class="fold-wrap">
               <div class="fold">
@@ -1128,7 +1141,10 @@ html[data-motion="idle"] .strip .dot {
   // dynamic global node tracking & state registry
   const nodes = $$('.node');
   const state = new Map();
-  nodes.forEach(n => state.set(n, { u: 0, v: 0, t: 0, cx: 0, cy: 0, baseT: 0, ripple: 0, r1: 0, tiltTarget: 0 }));
+  nodes.forEach(n => state.set(n, { u: 0, v: 0, t: 0, cx: 0, cy: 0, baseT: 0, ripple: 0, r1: 0, tiltTarget: 0, focused: false }));
+
+  // Reduced motion: springs snap to target, telemetry animations are skipped.
+  const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
   // ─── edge defs ──────────────────────────────────────────────────────────
   const edges = window.__ONTOLOGY__.edges;
@@ -1329,13 +1345,13 @@ html[data-motion="idle"] .strip .dot {
           // Main primary track
           out += `<polyline ${tag} points="${pts}" fill="none" stroke="${e.color}" stroke-width="${e.stroke}" stroke-dasharray="${e.dash}" stroke-linejoin="miter" marker-start="url(#tail-dot)" marker-end="url(#head-${hColor})">`;
 
-          if (e.animType === 'crawl') {
+          if (e.animType === 'crawl' && !reducedMotion) {
             out += `<animate attributeName="stroke-dashoffset" values="18;0" dur="${e.speed}" repeatCount="indefinite"/>`;
           }
           out += `</polyline>`;
 
           // Kinetic Data Packets Overlay
-          if (e.animType === 'packet') {
+          if (e.animType === 'packet' && !reducedMotion) {
             out += `<polyline ${tag} points="${pts}" fill="none" stroke="${e.accent}" stroke-width="${e.stroke + 1.8}" stroke-dasharray="4 36" stroke-linecap="round" stroke-linejoin="miter" pointer-events="none">
               <animate attributeName="stroke-dashoffset" values="40;0" dur="${e.speed}" repeatCount="indefinite"/>
             </polyline>`;
@@ -1449,6 +1465,11 @@ html[data-motion="idle"] .strip .dot {
   }
 
   function integrateSpring(s, dt) {
+    if (reducedMotion) {
+      s.u = s.t;
+      s.v = 0;
+      return;
+    }
     const force = PHYSICS.stiffness * (s.t - s.u) - PHYSICS.damping * s.v;
     s.v += (force / PHYSICS.mass) * dt;
     s.v = Math.max(-PHYSICS.maxVelocity, Math.min(PHYSICS.maxVelocity, s.v));
@@ -1496,21 +1517,21 @@ html[data-motion="idle"] .strip .dot {
   function updateTargets(lmx, lmy, pointerIsActive) {
     let minProx = Infinity;
 
-    // PASS 1: direct observation
+    // PASS 1: direct observation (pointer proximity ∪ keyboard focus)
     nodes.forEach(n => {
       const s = state.get(n);
       if (!pointerIsActive) {
         s.baseT = 0;
         s.tiltTarget = 0;
-        return;
+      } else {
+        const d = Math.hypot(s.cx - lmx, s.cy - lmy);
+        if (d < minProx) minProx = d;
+        s.baseT = smoothstep01(1 - d / PHYSICS.proximity);
+        // pointer azimuth → rotateY tilt target, scaled by unfold in applyNodeStyles
+        const dxn = Math.max(-1, Math.min(1, (lmx - s.cx) / PHYSICS.tiltFalloff));
+        s.tiltTarget = -dxn * PHYSICS.tiltMax;
       }
-
-      const d = Math.hypot(s.cx - lmx, s.cy - lmy);
-      if (d < minProx) minProx = d;
-      s.baseT = smoothstep01(1 - d / PHYSICS.proximity);
-      // pointer azimuth → rotateY tilt target, scaled by unfold in applyNodeStyles
-      const dxn = Math.max(-1, Math.min(1, (lmx - s.cx) / PHYSICS.tiltFalloff));
-      s.tiltTarget = -dxn * PHYSICS.tiltMax;
+      if (s.focused) s.baseT = Math.max(s.baseT, 1);
     });
 
     const hoverNode = resolveHover();
@@ -1581,6 +1602,21 @@ html[data-motion="idle"] .strip .dot {
   document.addEventListener('click', e => {
     const n = e.target.closest('.node');
     if (n && n.querySelector('.fold-wrap')) togglePin(n);
+  });
+
+  // Keyboard: focus unfolds (baseT boost in updateTargets), Enter/Space pins.
+  document.addEventListener('focusin', e => {
+    const n = e.target.closest('.node');
+    if (n && state.has(n)) { state.get(n).focused = true; wakePhysics(); }
+  });
+  document.addEventListener('focusout', e => {
+    const n = e.target.closest('.node');
+    if (n && state.has(n)) { state.get(n).focused = false; wakePhysics(); }
+  });
+  document.addEventListener('keydown', e => {
+    if (e.key !== 'Enter' && e.key !== ' ') return;
+    const n = e.target.closest && e.target.closest('.node');
+    if (n && n.querySelector('.fold-wrap')) { e.preventDefault(); togglePin(n); }
   });
 
   window.addEventListener('keydown', e => {
