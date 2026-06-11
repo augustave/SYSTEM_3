@@ -725,6 +725,33 @@ html[data-motion="idle"] .strip .dot {
     0 calc(var(--u) * 10px) calc(var(--u) * 24px) calc(var(--u) * -4px) color-mix(in srgb, var(--p-vermillion) 50%, transparent);
 }
 
+/* Focus dimming — when a hover/pin highlight set is active, nodes outside
+   the set and not topologically linked to it recede. */
+.node {
+  transition: opacity 180ms ease-out;
+}
+.node[data-dimmed="1"] {
+  opacity: 0.55;
+}
+
+/* Pinned node — locked open by click; survives pointer departure. */
+.node[data-pinned="1"] .fold {
+  outline: 2px solid var(--p-ivory-black);
+  outline-offset: 3px;
+}
+.node[data-pinned="1"]::after {
+  content: "◉ PINNED";
+  position: absolute;
+  bottom: -9px; right: 8px;
+  z-index: 6;
+  font-family: var(--mono);
+  font-size: 8.5px;
+  letter-spacing: 0.18em;
+  color: var(--p-lead-white);
+  background: var(--p-ivory-black);
+  padding: 1px 6px;
+}
+
 /* ════════════════════════════════════════════════════════════════════════════
    CURSOR LAYER
    ════════════════════════════════════════════════════════════════════════════ */
@@ -1363,7 +1390,7 @@ html[data-motion="idle"] .strip .dot {
     edgeBuildScroll.y = window.scrollY;
     edgesSvg.innerHTML = defs + '<g id="edgeRoot">' + out + '</g>';
     // Rebuild wipes data-match stamps — force the frame loop to re-resolve.
-    lastHoverId = null;
+    lastHighlightSig = null;
     if (!loopActive && typeof edgesSvg.pauseAnimations === 'function') {
       edgesSvg.pauseAnimations();
     }
@@ -1527,13 +1554,48 @@ html[data-motion="idle"] .strip .dot {
       });
 
       s1.ripple = s1.r1 + cascade;
-      s1.t = Math.min(1, s1.baseT + s1.ripple);
+      // pinned nodes are locked open regardless of observation
+      s1.t = pinnedIds.has(id1) ? 1 : Math.min(1, s1.baseT + s1.ripple);
     });
 
     return { minProx, hoverNode };
   }
 
-  function applyNodeStyles(hoverNode) {
+  // ─── pin interaction ─────────────────────────────────────────────────────
+  const pinnedIds = new Set();
+
+  function togglePin(node) {
+    const id = node.dataset.id;
+    if (pinnedIds.has(id)) {
+      pinnedIds.delete(id);
+      delete node.dataset.pinned;
+      node.setAttribute('aria-pressed', 'false');
+    } else {
+      pinnedIds.add(id);
+      node.dataset.pinned = '1';
+      node.setAttribute('aria-pressed', 'true');
+    }
+    wakePhysics();
+  }
+
+  document.addEventListener('click', e => {
+    const n = e.target.closest('.node');
+    if (n && n.querySelector('.fold-wrap')) togglePin(n);
+  });
+
+  window.addEventListener('keydown', e => {
+    if (e.key === 'Escape' && pinnedIds.size) {
+      pinnedIds.forEach(id => {
+        const n = $(`.node[data-id="${id}"]`);
+        if (n) { delete n.dataset.pinned; n.setAttribute('aria-pressed', 'false'); }
+      });
+      pinnedIds.clear();
+      wakePhysics();
+    }
+  });
+
+  function applyNodeStyles(hoverNode, highlightIds, linkedIds) {
+    const focusActive = highlightIds && highlightIds.size > 0;
     nodes.forEach(n => {
       const s = state.get(n);
       n.style.setProperty('--u', s.u.toFixed(4));
@@ -1549,6 +1611,18 @@ html[data-motion="idle"] .strip .dot {
         if (n.dataset.sympathetic !== '1') n.dataset.sympathetic = '1';
       } else if (n.dataset.sympathetic === '1') {
         delete n.dataset.sympathetic;
+      }
+
+      const id = n.dataset.id;
+      const dim = focusActive &&
+        !highlightIds.has(id) &&
+        !linkedIds.has(id) &&
+        !isSympathetic;
+
+      if (dim) {
+        if (n.dataset.dimmed !== '1') n.dataset.dimmed = '1';
+      } else if (n.dataset.dimmed === '1') {
+        delete n.dataset.dimmed;
       }
     });
   }
@@ -1567,7 +1641,7 @@ html[data-motion="idle"] .strip .dot {
   let last = performance.now();
   let accumulator = 0;
   let frames = 0, fpsAcc = 0;
-  let lastHoverId = null;
+  let lastHighlightSig = null;
   let rafId = 0;
   let loopActive = false;
   let clockTimer = 0;
@@ -1627,15 +1701,25 @@ html[data-motion="idle"] .strip .dot {
     }
     if (steps === PHYSICS.maxSubsteps) accumulator = 0;
 
-    applyNodeStyles(hoverNode);
-
+    // highlight set = hovered node + all pinned nodes
     const hoverId = hoverNode ? hoverNode.dataset.id : '';
-    if (hoverId !== lastHoverId) {
+    const highlightIds = new Set(pinnedIds);
+    if (hoverId) highlightIds.add(hoverId);
+    const linkedIds = new Set();
+    highlightIds.forEach(id => {
+      const l = topology.get(id);
+      if (l) l.forEach(x => linkedIds.add(x));
+    });
+
+    applyNodeStyles(hoverNode, highlightIds, linkedIds);
+
+    const sig = highlightIds.size ? Array.from(highlightIds).sort().join('|') : '';
+    if (sig !== lastHighlightSig) {
       const layer = edgesSvg.parentElement;
-      if (hoverId) {
+      if (sig) {
         layer.dataset.hovering = '1';
         layer.querySelectorAll('[data-edge]').forEach(el => {
-          const hit = el.getAttribute('data-src') === hoverId || el.getAttribute('data-tgt') === hoverId;
+          const hit = highlightIds.has(el.getAttribute('data-src')) || highlightIds.has(el.getAttribute('data-tgt'));
           if (hit) el.setAttribute('data-match', '1');
           else el.removeAttribute('data-match');
         });
@@ -1643,14 +1727,17 @@ html[data-motion="idle"] .strip .dot {
         delete layer.dataset.hovering;
         layer.querySelectorAll('[data-match]').forEach(el => el.removeAttribute('data-match'));
       }
-      lastHoverId = hoverId;
+      lastHighlightSig = sig;
     }
 
     if (readout) {
+      const tgtInfo = hoverNode
+        ? ` · TGT ${hoverId} · U ${Math.round(Math.min(1, state.get(hoverNode).u) * 100)}%`
+        : '';
       readout.textContent = pointer.active
         ? `X ${String(Math.max(0, Math.round(lmx))).padStart(3,'0')} · ` +
           `Y ${String(Math.max(0, Math.round(lmy))).padStart(3,'0')} · ` +
-          `PROX ${isFinite(minProx) ? Math.round(minProx) + 'PX' : '∞'}`
+          `PROX ${isFinite(minProx) ? Math.round(minProx) + 'PX' : '∞'}` + tgtInfo
         : 'X 000 · Y 000 · PROX ∞';
     }
     if (pminEl) pminEl.textContent = pointer.active && isFinite(minProx) ? Math.round(minProx) + 'PX' : '∞';
