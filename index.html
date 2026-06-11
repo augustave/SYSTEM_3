@@ -964,6 +964,7 @@ html[data-motion="idle"] .strip .dot {
     // deprecated residue carries inertia — ghosts open sluggish and overdamped
     tierOverrides: { ghost: { mass: 1.6, damping: 26 } },
     proximity: 240,         // rect-distance field: measured to panel edge, not centroid
+    packetDrip: 0.12,       // idle fraction of packet speed when no endpoint is active
     fixedDt: 1 / 120,
     maxFrameDt: 0.08,
     maxSubsteps: 10,
@@ -1268,6 +1269,7 @@ html[data-motion="idle"] .strip .dot {
   // scrolling only translates #edgeRoot instead of rebuilding the SVG, so
   // <animate> packet phases survive scroll.
   const edgeBuildScroll = { x: 0, y: 0 };
+  let packetRefs = [];   // JS-driven packet overlays — speed coupled to endpoint unfold
 
   function positionEdges() {
     const root = edgesSvg.querySelector('#edgeRoot');
@@ -1353,11 +1355,11 @@ html[data-motion="idle"] .strip .dot {
           }
           out += `</polyline>`;
 
-          // Kinetic Data Packets Overlay
+          // Kinetic Data Packets Overlay — offset advanced per frame by the
+          // physics loop; rate scales with endpoint activation (motion = state)
           if (e.animType === 'packet' && !reducedMotion) {
-            out += `<polyline ${tag} points="${pts}" fill="none" stroke="${e.accent}" stroke-width="${e.stroke + 1.8}" stroke-dasharray="4 36" stroke-linecap="round" stroke-linejoin="miter" pointer-events="none">
-              <animate attributeName="stroke-dashoffset" values="40;0" dur="${e.speed}" repeatCount="indefinite"/>
-            </polyline>`;
+            const pxPerSec = (40 / (parseFloat(e.speed) || 1)).toFixed(2);
+            out += `<polyline ${tag} class="packet-line" data-speed="${pxPerSec}" points="${pts}" fill="none" stroke="${e.accent}" stroke-width="${e.stroke + 1.8}" stroke-dasharray="4 36" stroke-dashoffset="0" stroke-linecap="round" stroke-linejoin="miter" pointer-events="none"/>`;
           }
 
           // inflection marker — small open square
@@ -1410,6 +1412,13 @@ html[data-motion="idle"] .strip .dot {
     edgesSvg.innerHTML = defs + '<g id="edgeRoot">' + out + '</g>';
     // Rebuild wipes data-match stamps — force the frame loop to re-resolve.
     lastHighlightSig = null;
+    packetRefs = Array.from(edgesSvg.querySelectorAll('.packet-line')).map(el => ({
+      el,
+      src: el.getAttribute('data-src'),
+      tgt: el.getAttribute('data-tgt'),
+      speed: parseFloat(el.getAttribute('data-speed')) || 30,
+      offset: 0
+    }));
     if (!loopActive && typeof edgesSvg.pauseAnimations === 'function') {
       edgesSvg.pauseAnimations();
     }
@@ -1679,13 +1688,18 @@ html[data-motion="idle"] .strip .dot {
   }
 
   function physicsSettled() {
-    return nodes.every(n => {
+    let anyOpen = false;
+    const settled = nodes.every(n => {
       const s = state.get(n);
+      if (s.u > 0.05) anyOpen = true;
       return (
         Math.abs(s.v) <= PHYSICS.sleepEpsilon &&
         Math.abs(s.u - s.t) <= PHYSICS.sleepEpsilon
       );
     });
+    // While the observer is present and a fold is open, packets must keep
+    // flowing (their rate IS the state signal) — defer sleep until departure.
+    return settled && !(pointer.active && anyOpen);
   }
 
   // ─── main loop ──────────────────────────────────────────────────────────
@@ -1763,6 +1777,17 @@ html[data-motion="idle"] .strip .dot {
     });
 
     applyNodeStyles(hoverNode, highlightIds, linkedIds);
+
+    // advance packet telemetry — rate is a function of endpoint unfold
+    if (!reducedMotion && packetRefs.length) {
+      packetRefs.forEach(p => {
+        const ss = stateById.get(p.src), ts = stateById.get(p.tgt);
+        const energy = Math.min(1, Math.max(ss ? ss.u : 0, ts ? ts.u : 0));
+        p.offset -= frameDt * p.speed * (PHYSICS.packetDrip + (1 - PHYSICS.packetDrip) * energy);
+        if (p.offset < -40) p.offset += 40;
+        p.el.setAttribute('stroke-dashoffset', p.offset.toFixed(2));
+      });
+    }
 
     const sig = highlightIds.size ? Array.from(highlightIds).sort().join('|') : '';
     if (sig !== lastHighlightSig) {
