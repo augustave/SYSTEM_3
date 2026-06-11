@@ -1093,9 +1093,9 @@ html[data-motion="idle"] .strip .dot {
             <div class="fold-wrap">
               <div class="fold">
                 <span class="fold-cue">FOLDED</span>
-                <svg class="creases" viewBox="0 0 100 100" preserveAspectRatio="none">
+                <svg class="creases" viewBox="0 0 400 150" preserveAspectRatio="none">
                   <defs><pattern id="${c.patternId}_${i}" width="${c.patternSize.split(',')[0]}" height="${c.patternSize.split(',')[1]}" patternUnits="userSpaceOnUse">${c.patternSvg}</pattern></defs>
-                  <rect width="100" height="100" fill="url(#${c.patternId}_${i})"/>
+                  <rect width="400" height="150" fill="url(#${c.patternId}_${i})"/>
                 </svg>
                 <div class="title-row"><span class="id">${n.id}</span><span class="ord">${n.ord}</span></div>
                 <h3 class="title">${n.title}</h3><p class="func">${n.func}</p>
@@ -1233,8 +1233,8 @@ html[data-motion="idle"] .strip .dot {
   function buildSubstrate() {
     const vbW = 1400, vbH = 1200;
     substrate.setAttribute('viewBox', `0 0 ${vbW} ${vbH}`);
-    const cellW = 56, cellH = 34;     // parallelogram unit
-    const skew  = 14;                 // shear amount per row
+    const cellW = 36, cellH = 22;     // parallelogram unit — dense tessellation
+    const skew  = 9;                  // shear amount per row
     let out = '';
 
     // background

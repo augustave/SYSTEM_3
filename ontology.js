@@ -1,10 +1,10 @@
 /* ════════════════════════════════════════════════════════════════════════════
-   SYSTEM_3 · KNOWLEDGE_MESH · ONTOLOGY DATA · v1.7.0
+   SYSTEM_3 · KNOWLEDGE_MESH · ONTOLOGY DATA · v1.7.1
    Single source of truth. Edit this file to mutate the mesh.
    Loaded via <script> before the main runtime → no fetch, no CORS.
    ════════════════════════════════════════════════════════════════════════════ */
 window.__ONTOLOGY__ = {
-  revision: "1.7.0",
+  revision: "1.7.1",
 
   metaAnchor: {
     id: "KM_ANCHOR",
