@@ -42,6 +42,9 @@
   --mod: 8px;
   --ruler: 32px;
 
+  /* ── TEMPO — single temporal grid for all UI transitions ──────────────── */
+  --tau: 160ms;
+
   /* ── TYPE ────────────────────────────────────────────────────────────── */
   --mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
   --sans: "Inter", "Helvetica Neue", Helvetica, Arial, sans-serif;
@@ -721,7 +724,7 @@ html[data-motion="idle"] .strip .dot {
    and glow.
    ════════════════════════════════════════════════════════════════════════════ */
 .edges-layer [data-edge] {
-  transition: opacity 180ms ease-out, filter 180ms ease-out;
+  transition: opacity var(--tau) ease-out, filter var(--tau) ease-out;
 }
 .edges-layer[data-hovering="1"] [data-edge]:not([data-match="1"]) {
   opacity: 0.16;
@@ -741,7 +744,7 @@ html[data-motion="idle"] .strip .dot {
 /* Focus dimming — when a hover/pin highlight set is active, nodes outside
    the set and not topologically linked to it recede. */
 .node {
-  transition: opacity 180ms ease-out;
+  transition: opacity var(--tau) ease-out;
 }
 .node[data-dimmed="1"] {
   opacity: 0.55;
@@ -765,15 +768,31 @@ html[data-motion="idle"] .strip .dot {
   padding: 1px 6px;
 }
 
+/* Pin acquisition ceremony — one mechanical settle pulse */
+@keyframes pin-acquire {
+  0%   { transform: scale(1); }
+  40%  { transform: scale(1.03); }
+  100% { transform: scale(1); }
+}
+.node[data-pinned="1"] .fold-wrap {
+  animation: pin-acquire calc(var(--tau) * 2) ease-out;
+}
+
 /* Keyboard focus ring — forensic dashed vermillion */
 .node:focus-visible {
   outline: 2px dashed var(--p-vermillion);
   outline-offset: 4px;
 }
 
+/* Crosshair lock state — target acquired, ring tightens to chrome */
+.xh .ring { transition: inset var(--tau) ease-out, border-color var(--tau) ease-out; }
+.xh[data-lock="1"] .ring { inset: 4px; border-color: var(--p-chrome-yellow); }
+.xh[data-lock="1"]::before, .xh[data-lock="1"]::after { background: var(--p-chrome-yellow); }
+
 @media (prefers-reduced-motion: reduce) {
   .strip .dot { animation: none; }
   .node { transition: none; }
+  .node[data-pinned="1"] .fold-wrap { animation: none; }
 }
 
 /* ════════════════════════════════════════════════════════════════════════════
@@ -1166,6 +1185,7 @@ html[data-motion="idle"] .strip .dot {
       baseT: 0, ripple: 0, r1: 0, tiltTarget: 0, focused: false,
       mass: tier ? tier.mass : PHYSICS.mass,
       damping: tier ? tier.damping : PHYSICS.damping,
+      cascadeSm: 0,
       lastU: -1, lastTilt: 999
     });
   });
@@ -1587,7 +1607,7 @@ html[data-motion="idle"] .strip .dot {
     return currentHoverNode;
   }
 
-  function updateTargets(lmx, lmy, pointerIsActive) {
+  function updateTargets(lmx, lmy, pointerIsActive, dt) {
     let minProx = Infinity;
 
     // PASS 1: direct observation (pointer proximity ∪ keyboard focus)
@@ -1651,7 +1671,11 @@ html[data-motion="idle"] .strip .dot {
         cascade += s2.r1 * Math.max(spatial, linked) * PHYSICS.cascadeDecay;
       });
 
-      s1.ripple = s1.r1 + cascade;
+      // low-pass attack (~120ms) on cascade energy — the second-order wave
+      // arrives audibly later than first-order, so propagation reads as travel
+      const alpha = 1 - Math.exp(-(dt || 0.008) / 0.12);
+      s1.cascadeSm += (cascade - s1.cascadeSm) * alpha;
+      s1.ripple = s1.r1 + s1.cascadeSm;
       // pinned nodes are locked open regardless of observation
       s1.t = pinnedIds.has(id1) ? 1 : Math.min(1, s1.baseT + s1.ripple);
     });
@@ -1817,7 +1841,7 @@ html[data-motion="idle"] .strip .dot {
     const mr = mesh.getBoundingClientRect();
     const lmx = pointer.x - mr.left;
     const lmy = pointer.y - mr.top;
-    const { minProx, hoverNode } = updateTargets(lmx, lmy, pointer.active);
+    const { minProx, hoverNode } = updateTargets(lmx, lmy, pointer.active, frameDt);
 
     let steps = 0;
     while (accumulator >= PHYSICS.fixedDt && steps < PHYSICS.maxSubsteps) {
@@ -1869,9 +1893,17 @@ html[data-motion="idle"] .strip .dot {
       lastHighlightSig = sig;
     }
 
+    // crosshair lock affordance — ring tightens when a target is acquired
+    const lock = hoverId ? '1' : '';
+    if ((xh.dataset.lock || '') !== lock) {
+      if (lock) xh.dataset.lock = '1';
+      else delete xh.dataset.lock;
+    }
+
     if (readout) {
       const tgtInfo = hoverNode
-        ? ` · TGT ${hoverId} · U ${Math.round(Math.min(1, state.get(hoverNode).u) * 100)}%`
+        ? ` · TGT ${hoverId} · U ${Math.round(Math.min(1, state.get(hoverNode).u) * 100)}%` +
+          (pinnedIds.has(hoverId) ? ' · PINNED' : ' · CLICK=PIN')
         : '';
       readout.textContent = pointer.active
         ? `X ${String(Math.max(0, Math.round(lmx))).padStart(3,'0')} · ` +
