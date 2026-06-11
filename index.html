@@ -296,10 +296,12 @@ html[data-motion="idle"] .strip .dot {
   inset: 0;
   z-index: 1;
   pointer-events: none;
-  opacity: 0.55;
+  /* 0.78 × tile baseline 0.7 ≈ previous flat 0.55 — strain raises tiles to 1.0 */
+  opacity: 0.78;
   mask-image: linear-gradient(to bottom, transparent 0%, black 4%, black 96%, transparent 100%);
 }
 .substrate svg { width: 100%; height: 100%; display: block; }
+.substrate .sub-tile { transition: opacity 240ms linear; }
 
 /* edge layer */
 .edges-layer {
@@ -391,6 +393,17 @@ html[data-motion="idle"] .strip .dot {
 /* ════════════════════════════════════════════════════════════════════════════
    NODE — Miura-ori fold panel with real 3D rotateX unfolding
    ════════════════════════════════════════════════════════════════════════════ */
+/* Excitation halo — local substrate response under an opening node */
+.node .halo {
+  position: absolute;
+  inset: -18px;
+  border-radius: 50%;
+  background: radial-gradient(ellipse at 50% 60%, var(--halo-c, transparent) 0%, transparent 70%);
+  opacity: calc(var(--u) * 0.8);
+  transform: scale(calc(0.85 + var(--u) * 0.3));
+  z-index: 0;
+  pointer-events: none;
+}
 .node {
   position: relative;
   margin-bottom: 28px;
@@ -1057,6 +1070,7 @@ html[data-motion="idle"] .strip .dot {
             tabindex="0" role="button" aria-pressed="false"
             aria-label="${n.title}. ${n.func}">
             <span class="reg">${n.ref}</span><span class="reg reg--alt">${n.alt}</span><span class="reg reg--type">${n.type}</span>
+            <div class="halo" style="--halo-c: color-mix(in srgb, ${c.color} 14%, transparent)"></div>
             <div class="fold-wrap">
               <div class="fold">
                 <span class="fold-cue">FOLDED</span>
@@ -1084,6 +1098,7 @@ html[data-motion="idle"] .strip .dot {
       <article class="node node--ghost" data-id="${g.id}">
         <span class="reg">${g.ref}</span>
         <span class="reg reg--alt">${g.alt}</span>
+        <div class="halo" style="--halo-c: color-mix(in srgb, var(--p-alizarin) 12%, transparent)"></div>
         <div class="fold-wrap"><div class="fold">
           <span class="dep-stamp">DEPR.</span>
           <div class="strike"></div>
@@ -1214,7 +1229,12 @@ html[data-motion="idle"] .strip .dot {
       <path d="M${vbW-b} ${vbH-8} H${vbW-8} V${vbH-b}" />
     </g>`;
 
-    // Miura-ori tessellation — alternating mountain (solid) / valley (dash) rows
+    // Miura-ori tessellation — alternating mountain (solid) / valley (dash) rows.
+    // Cells are bucketed into a coarse 7×5 tile grid so the strain field can
+    // raise local opacity without touching ~900 individual paths per frame.
+    const TILE_COLS = 7, TILE_ROWS = 5;
+    const tileW = vbW / TILE_COLS, tileH = vbH / TILE_ROWS;
+    const tiles = Array.from({ length: TILE_COLS * TILE_ROWS }, () => '');
     for (let r = 0; r < Math.ceil(vbH / cellH) + 1; r++) {
       const y0 = r * cellH;
       const isValleyRow = (r % 2 === 0);
@@ -1230,10 +1250,16 @@ html[data-motion="idle"] .strip .dot {
         // valley folds: short edges (dashed)
         const mountainStroke = `stroke="var(--p-raw-umber)" stroke-width="0.35" fill="none" opacity="0.55"`;
         const valleyStroke   = `stroke="var(--p-raw-umber)" stroke-width="0.25" stroke-dasharray="1.5 1.8" fill="none" opacity="0.4"`;
-        // outline of cell
-        out += `<path d="M${x0} ${y0} L${x1} ${y0} L${x2} ${y1} L${x3} ${y1} Z" ${isValleyRow ? valleyStroke : mountainStroke}/>`;
+        const tc = Math.min(TILE_COLS - 1, Math.max(0, Math.floor((x0 + cellW / 2) / tileW)));
+        const tr = Math.min(TILE_ROWS - 1, Math.max(0, Math.floor((y0 + cellH / 2) / tileH)));
+        tiles[tr * TILE_COLS + tc] += `<path d="M${x0} ${y0} L${x1} ${y0} L${x2} ${y1} L${x3} ${y1} Z" ${isValleyRow ? valleyStroke : mountainStroke}/>`;
       }
     }
+    tiles.forEach((paths, i) => {
+      const tx = (i % TILE_COLS) * tileW + tileW / 2;
+      const ty = Math.floor(i / TILE_COLS) * tileH + tileH / 2;
+      out += `<g class="sub-tile" data-tx="${tx}" data-ty="${ty}" style="opacity:0.7">${paths}</g>`;
+    });
 
     // sparse register crosses
     for (let i = 0; i < 12; i++) {
@@ -1261,6 +1287,41 @@ html[data-motion="idle"] .strip .dot {
       s.cy = r.top - mr.top + r.height / 2;
       s.hw = r.width / 2;
       s.hh = r.height / 2;
+    });
+  }
+
+  // ─── substrate strain field ─────────────────────────────────────────────
+  let subTiles = [];
+
+  function indexSubstrateTiles() {
+    // map tile centers from viewBox coords to mesh-local px (slice scaling)
+    const sr = substrate.getBoundingClientRect();
+    const mr = mesh.getBoundingClientRect();
+    const sc = Math.max(sr.width / 1400, sr.height / 1200);
+    const offX = sr.left - mr.left + (sr.width - 1400 * sc) / 2;
+    const offY = sr.top - mr.top + (sr.height - 1200 * sc) / 2;
+    subTiles = Array.from(substrate.querySelectorAll('.sub-tile')).map(g => ({
+      g,
+      x: parseFloat(g.dataset.tx) * sc + offX,
+      y: parseFloat(g.dataset.ty) * sc + offY,
+      last: -1
+    }));
+  }
+
+  function updateSubstrate() {
+    subTiles.forEach(t => {
+      let exc = 0;
+      nodes.forEach(n => {
+        const s = state.get(n);
+        if (s.u <= 0.03) return;
+        const d = Math.hypot(t.x - s.cx, t.y - s.cy);
+        if (d < 360) exc += s.u * smoothstep01(1 - d / 360);
+      });
+      const op = 0.7 + 0.3 * Math.min(1, exc);
+      if (Math.abs(op - t.last) > 0.04) {
+        t.g.style.opacity = op.toFixed(2);
+        t.last = op;
+      }
     });
   }
 
@@ -1778,6 +1839,8 @@ html[data-motion="idle"] .strip .dot {
 
     applyNodeStyles(hoverNode, highlightIds, linkedIds);
 
+    updateSubstrate();
+
     // advance packet telemetry — rate is a function of endpoint unfold
     if (!reducedMotion && packetRefs.length) {
       packetRefs.forEach(p => {
@@ -1859,6 +1922,7 @@ html[data-motion="idle"] .strip .dot {
   function recompute(options = {}) {
     if (options.reserve) reserveExpansionSpace();
     updateCenters();
+    indexSubstrateTiles();
     drawEdges();
   }
 
