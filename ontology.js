@@ -1,10 +1,10 @@
 /* ════════════════════════════════════════════════════════════════════════════
-   SYSTEM_3 · KNOWLEDGE_MESH · ONTOLOGY DATA · v1.6.0
+   SYSTEM_3 · KNOWLEDGE_MESH · ONTOLOGY DATA · v1.7.0
    Single source of truth. Edit this file to mutate the mesh.
    Loaded via <script> before the main runtime → no fetch, no CORS.
    ════════════════════════════════════════════════════════════════════════════ */
 window.__ONTOLOGY__ = {
-  revision: "1.6.0",
+  revision: "1.7.0",
 
   metaAnchor: {
     id: "KM_ANCHOR",
@@ -69,6 +69,8 @@ window.__ONTOLOGY__ = {
     }
   ],
 
+  // speed = packet base period; runtime scales actual flow by endpoint unfold
+  // (τ grid: 0.8s ≈ 5τ · 1.2s ≈ 7.5τ · 3s ≈ 19τ at τ=160ms)
   edges: [
     { name: "V-α", title: "OODA → CAPITAL",        legend: "OODA → CAPITAL · CTW → RWO", sources: ["CERTAIN_TO_WIN"], targets: ["RWO"],        color: "var(--p-chrome-yellow)", stroke: 2.4, accent: "var(--p-vermillion)",   dash: "0",   bend:  0.26, animType: "packet", speed: "1.2s" },
     { name: "V-β", title: "TOPOLOGICAL DEFENSE",   legend: "TOPO · DEFENSE · PAT → KM",  sources: ["PATTERN"],        targets: ["KM_ANCHOR"],  color: "var(--p-ultramarine)",   stroke: 1.8, accent: "var(--p-alizarin)",     dash: "6 3", bend: -0.22, animType: "crawl",  speed: "3s"   },
